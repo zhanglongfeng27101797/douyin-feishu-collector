@@ -18,16 +18,24 @@ export async function collectMetadata({ context, item, row, source, existingIds 
   if (duplicateId && duplicateId !== item.record_id) {
     throw new Error(`该作品已存在，记录ID: ${duplicateId}`);
   }
-  await updateRecord(
-    token,
-    appToken,
-    table.table_id,
-    item.record_id,
-    mapRecord(
-      { ...metadata, "采集状态": "基础信息成功，转写中", "错误原因": "" },
-      fields,
-    ),
-  );
+  // 在第一个异步写入前先占用作品 ID，避免并发采集相同链接时产生重复记录。
   existingIds.set(String(metadata["作品ID"]), item.record_id);
+  try {
+    await updateRecord(
+      token,
+      appToken,
+      table.table_id,
+      item.record_id,
+      mapRecord(
+        { ...metadata, "采集状态": "基础信息成功，转写中", "错误原因": "" },
+        fields,
+      ),
+    );
+  } catch (error) {
+    if (existingIds.get(String(metadata["作品ID"])) === item.record_id) {
+      existingIds.delete(String(metadata["作品ID"]));
+    }
+    throw error;
+  }
   return { ...row, ...metadata };
 }

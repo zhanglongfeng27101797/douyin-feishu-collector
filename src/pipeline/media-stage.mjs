@@ -2,9 +2,11 @@ import { parseDouyinShare } from "../parse-douyin.mjs";
 import {
   downloadAndUploadCover,
   downloadAndUploadVideo,
+  isRefreshableMediaError,
 } from "../feishu-media.mjs";
 import { updateRecord } from "../feishu/client.mjs";
 import { fieldsSubset, getLinkValue, mapRecord } from "../feishu/fields.mjs";
+import { getCoverCandidates, getVideoCandidates } from "../media/candidates.mjs";
 
 export async function uploadCover({ context, item, row }) {
   const { token, appToken, table, fields, fieldNames } = context;
@@ -20,7 +22,7 @@ export async function uploadCover({ context, item, row }) {
 
   try {
     console.log(`[封面] ${row["作品ID"]} 正在上传封面`);
-    const uploaded = await downloadAndUploadCover(getLinkValue(row["封面链接"]), {
+    const uploaded = await downloadAndUploadCover(getCoverCandidates(row), {
       token,
       appToken,
       awemeId: row["作品ID"],
@@ -67,14 +69,14 @@ export async function uploadVideo({ context, item, row, source }) {
     console.log(`[视频附件] ${current["作品ID"]} 正在上传原视频`);
     let uploaded;
     try {
-      uploaded = await downloadAndUploadVideo(getLinkValue(current["视频链接"]), {
+      uploaded = await downloadAndUploadVideo(getVideoCandidates(current), {
         token,
         appToken,
         awemeId: current["作品ID"],
       });
     } catch (downloadError) {
       const refreshSource = source || getLinkValue(current["标准链接"]);
-      if (!String(downloadError.message).includes("HTTP 403") || !refreshSource) {
+      if (!isRefreshableMediaError(downloadError) || !refreshSource) {
         throw downloadError;
       }
       console.log(`[视频附件] ${current["作品ID"]} 播放地址已过期，正在重新解析`);
@@ -87,7 +89,7 @@ export async function uploadVideo({ context, item, row, source }) {
         item.record_id,
         mapRecord(refreshed, fields),
       );
-      uploaded = await downloadAndUploadVideo(getLinkValue(refreshed["视频链接"]), {
+      uploaded = await downloadAndUploadVideo(getVideoCandidates(refreshed), {
         token,
         appToken,
         awemeId: current["作品ID"],
@@ -95,17 +97,22 @@ export async function uploadVideo({ context, item, row, source }) {
     }
 
     const attachment = [{ file_token: uploaded.fileToken }];
+    const updates = {
+      "视频附件": attachment,
+      "视频链接": uploaded.usedUrl || current["视频链接"],
+      "错误原因": "",
+    };
     await updateRecord(
       token,
       appToken,
       table.table_id,
       item.record_id,
-      mapRecord({ "视频附件": attachment, "错误原因": "" }, fields),
+      mapRecord(updates, fields),
     );
     console.log(
       `[视频附件成功] ${current["作品ID"]} ${(uploaded.size / 1024 / 1024).toFixed(1)} MB`,
     );
-    return { ...current, "视频附件": attachment, "错误原因": "" };
+    return { ...current, ...updates };
   } catch (error) {
     const message = `视频附件上传失败：${error.message}`;
     await updateRecord(

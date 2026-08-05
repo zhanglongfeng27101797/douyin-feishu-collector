@@ -2,6 +2,7 @@ import { updateRecord } from "../feishu/client.mjs";
 import { fieldsSubset, getLinkValue, mapRecord } from "../feishu/fields.mjs";
 import { proofreadTranscript } from "../review-transcript.mjs";
 import { transcribeVideo } from "../transcribe-media.mjs";
+import { getVideoCandidates } from "../media/candidates.mjs";
 
 function hashtags(row) {
   return Array.isArray(row["话题标签"])
@@ -43,13 +44,16 @@ export async function transcribeMissing({ context, item, row }) {
     fieldsSubset({ "转写状态": "转写中", "转写错误原因": "" }, fieldNames),
   );
   try {
-    const transcript = await transcribeVideo(getLinkValue(row["视频链接"]), {
+    const transcript = await transcribeVideo(getVideoCandidates(row), {
       prompt: transcriptionPrompt(row),
     });
     const candidates = Array.isArray(transcript.__asrCandidates)
       ? transcript.__asrCandidates
       : [];
     delete transcript.__asrCandidates;
+    const sourceVideoUrl = transcript.__sourceVideoUrl;
+    delete transcript.__sourceVideoUrl;
+    if (sourceVideoUrl) transcript["视频链接"] = sourceVideoUrl;
 
     if (candidates.length >= 2 || process.env.ENABLE_TEXT_PROOFREAD === "true") {
       try {

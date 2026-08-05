@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { uniqueHttpUrls } from "./media/candidates.mjs";
 
 const VOLCENGINE_FLASH_URL =
   "https://openspeech.bytedance.com/api/v3/auc/bigmodel/recognize/flash";
@@ -37,29 +38,45 @@ function run(command, args, { captureStdout = false } = {}) {
   });
 }
 
-export async function transcribeVideo(videoUrl, { model, prompt = "" } = {}) {
-  if (!videoUrl) throw new Error("缺少视频地址");
+export async function transcribeVideo(videoUrls, { model, prompt = "" } = {}) {
+  const candidates = uniqueHttpUrls(videoUrls);
+  if (!candidates.length) throw new Error("缺少视频地址");
   const workDir = await mkdtemp(join(tmpdir(), "douyin-transcribe-"));
   const audioPath = join(workDir, "audio.wav");
   try {
-    await run(process.env.FFMPEG_PATH || "/opt/homebrew/bin/ffmpeg", [
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-y",
-      "-user_agent",
-      DESKTOP_UA,
-      "-i",
-      videoUrl,
-      "-vn",
-      "-ac",
-      "1",
-      "-ar",
-      "16000",
-      "-c:a",
-      "pcm_s16le",
-      audioPath,
-    ]);
+    let sourceVideoUrl = "";
+    const extractionErrors = [];
+    for (const videoUrl of candidates) {
+      try {
+        await run(process.env.FFMPEG_PATH || "/opt/homebrew/bin/ffmpeg", [
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-user_agent",
+          DESKTOP_UA,
+          "-i",
+          videoUrl,
+          "-vn",
+          "-ac",
+          "1",
+          "-ar",
+          "16000",
+          "-c:a",
+          "pcm_s16le",
+          audioPath,
+        ]);
+        sourceVideoUrl = videoUrl;
+        break;
+      } catch (error) {
+        extractionErrors.push(String(error.message || error));
+      }
+    }
+    if (!sourceVideoUrl) {
+      throw new Error(
+        `全部 ${candidates.length} 个视频地址均无法提取音频：${[...new Set(extractionErrors)].slice(0, 2).join("；")}`,
+      );
+    }
     const cloudResults = [];
     const cloudErrors = [];
     try {
@@ -91,6 +108,7 @@ export async function transcribeVideo(videoUrl, { model, prompt = "" } = {}) {
           text: cleanTranscript(item.text),
           source: item.source,
         })),
+        __sourceVideoUrl: sourceVideoUrl,
       };
     }
 
@@ -119,7 +137,10 @@ export async function transcribeVideo(videoUrl, { model, prompt = "" } = {}) {
     const lines = stdout.trim().split("\n").filter(Boolean);
     const result = JSON.parse(lines.at(-1) || "{}");
     if (!result.text) throw new Error("视频中未识别到有效语音");
-    return resultFields(result.text, `本机 Whisper ${result.model}`, true);
+    return {
+      ...resultFields(result.text, `本机 Whisper ${result.model}`, true),
+      __sourceVideoUrl: sourceVideoUrl,
+    };
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }

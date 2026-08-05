@@ -75,6 +75,7 @@ cp .env.example .env.local
 | `FEISHU_APP_ID` / `FEISHU_APP_SECRET` | 飞书自建应用凭证 |
 | `FEISHU_APP_TOKEN` | 多维表格链接中 `/base/` 后的 token |
 | `FEISHU_TABLE_NAME` | 监听的数据表名称，默认“采集库” |
+| `FEISHU_RECORD_CONCURRENCY` | 同时处理的记录数，默认 2，范围 1～5 |
 | `VOLCENGINE_SPEECH_API_KEY` | 火山引擎豆包语音新版 API Key |
 | `DASHSCOPE_API_KEY` | 阿里云百炼 API Key |
 | `BAILIAN_VOCABULARY_ID` | 可选的母婴专业热词表 ID |
@@ -151,6 +152,7 @@ ENABLE_TEXT_PROOFREAD=false
 
 - 抖音接口和页面结构可能变化，解析逻辑需要随平台更新。
 - 封面和视频源地址可能过期，飞书附件才是持久保存结果。
+- 解析器会按码率和分辨率保存多个视频候选地址；下载或音轨提取失败时自动换源，全部失效时仅重新解析该作品一次。
 - 请只采集你有权处理的内容，并遵守平台规则和相关法律。
 - `outputs/` 仅用于本机日志和导出，不进入 Git 仓库。
 

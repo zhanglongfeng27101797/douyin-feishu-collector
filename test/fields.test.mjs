@@ -6,6 +6,11 @@ import {
   getLinkValue,
   mapRecord,
 } from "../src/feishu/fields.mjs";
+import {
+  getCoverCandidates,
+  getVideoCandidates,
+  uniqueHttpUrls,
+} from "../src/media/candidates.mjs";
 
 test("优先读取整段抖音分享文本", () => {
   const row = {
@@ -55,4 +60,24 @@ test("按飞书字段类型转换写入值", () => {
 
 test("只保留目标表真实存在的字段", () => {
   assert.deepEqual(fieldsSubset({ A: 1, B: 2 }, ["B"]), { B: 2 });
+});
+
+test("兼容数组、JSON文本和主视频链接的候选地址", () => {
+  assert.deepEqual(
+    getVideoCandidates({
+      "视频候选链接": '["https://a.test/1.mp4","https://a.test/2.mp4"]',
+      "视频链接": "https://a.test/1.mp4",
+    }),
+    ["https://a.test/1.mp4", "https://a.test/2.mp4"],
+  );
+  assert.deepEqual(uniqueHttpUrls("无效", "https://a.test/1.mp4"), [
+    "https://a.test/1.mp4",
+  ]);
+  assert.deepEqual(
+    getCoverCandidates({
+      "封面候选链接": ["https://a.test/cover.jpg"],
+      "封面链接": "https://a.test/cover.jpg",
+    }),
+    ["https://a.test/cover.jpg"],
+  );
 });

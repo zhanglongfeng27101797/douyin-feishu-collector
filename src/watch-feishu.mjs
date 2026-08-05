@@ -11,6 +11,25 @@ import { needsProcessing, processRecord } from "./pipeline/record-pipeline.mjs";
 const DEFAULT_INTERVAL_SECONDS = 10;
 const TOKEN_REFRESH_MS = 60 * 60 * 1000;
 
+function recordConcurrency() {
+  const configured = Number(process.env.FEISHU_RECORD_CONCURRENCY || 2);
+  return Number.isFinite(configured) ? Math.max(1, Math.min(5, Math.floor(configured))) : 2;
+}
+
+async function processWithConcurrency(items, concurrency, worker) {
+  let nextIndex = 0;
+  async function runWorker() {
+    while (nextIndex < items.length) {
+      const item = items[nextIndex];
+      nextIndex += 1;
+      await worker(item);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => runWorker()),
+  );
+}
+
 export async function buildContext() {
   loadLocalEnv();
   const { appId, appSecret, appToken, tableName } = getFeishuConfig();
@@ -44,9 +63,11 @@ export async function runOnce(context, retryAfter = new Map()) {
     return 0;
   }
 
-  for (const item of pending) {
-    await processRecord({ context, item, existingIds, retryAfter });
-  }
+  const concurrency = recordConcurrency();
+  console.log(`[监听] 发现 ${pending.length} 条待处理记录，并发数 ${concurrency}`);
+  await processWithConcurrency(pending, concurrency, (item) =>
+    processRecord({ context, item, existingIds, retryAfter }),
+  );
   return pending.length;
 }
 

@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { uniqueHttpUrls } from "./media/candidates.mjs";
 
 const MOBILE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) " +
@@ -79,6 +80,37 @@ function toNoWatermarkUrl(url) {
     .replace("/aweme/v2/playwm/", "/aweme/v2/play/");
 }
 
+function bitrateValue(item) {
+  return Number(item?.bit_rate || item?.bitrate || 0);
+}
+
+function pixelCount(item) {
+  const address = item?.play_addr || {};
+  return Number(address.width || item?.width || 0) * Number(address.height || item?.height || 0);
+}
+
+export function collectVideoCandidates(video = {}) {
+  const bitrateAddresses = [...(video.bit_rate || [])]
+    .sort((left, right) => {
+      const bitrateDifference = bitrateValue(right) - bitrateValue(left);
+      return bitrateDifference || pixelCount(right) - pixelCount(left);
+    })
+    .flatMap((item) => item?.play_addr?.url_list || []);
+  return uniqueHttpUrls(
+    bitrateAddresses.map(toNoWatermarkUrl),
+    (video.download_addr?.url_list || []).map(toNoWatermarkUrl),
+    (video.play_addr?.url_list || []).map(toNoWatermarkUrl),
+  );
+}
+
+export function collectCoverCandidates(video = {}) {
+  return uniqueHttpUrls(
+    video.origin_cover?.url_list,
+    video.cover?.url_list,
+    video.dynamic_cover?.url_list,
+  );
+}
+
 async function fetchAwemeDetail(awemeId) {
   const shareUrl = `https://www.iesdouyin.com/share/video/${awemeId}/?from_ssr=1`;
   const response = await fetch(shareUrl, {
@@ -110,6 +142,8 @@ function toCollectionRecord(detail, sourceUrl) {
   const stats = detail.statistics || {};
   const video = detail.video || {};
   const author = detail.author || {};
+  const videoCandidates = collectVideoCandidates(video);
+  const coverCandidates = collectCoverCandidates(video);
 
   return {
     "原始链接": sourceUrl,
@@ -123,8 +157,12 @@ function toCollectionRecord(detail, sourceUrl) {
     "博主主页": author.sec_uid
       ? `https://www.douyin.com/user/${author.sec_uid}`
       : null,
-    "封面链接": video.cover?.url_list?.[0] || null,
-    "视频链接": toNoWatermarkUrl(video.play_addr?.url_list?.[0]),
+    "封面链接": coverCandidates[0] || null,
+    // 与视频候选链接相同，只在本次进程内用于容错，不要求飞书存在此字段。
+    "封面候选链接": coverCandidates,
+    "视频链接": videoCandidates[0] || null,
+    // 仅供本次采集进程进行下载和转写重试；目标表没有该字段时不会写入飞书。
+    "视频候选链接": videoCandidates,
     "点赞数": stats.digg_count ?? null,
     "收藏数": stats.collect_count ?? null,
     "评论数": stats.comment_count ?? null,
