@@ -6,7 +6,9 @@
   "scripts": {
     "parse": "node src/parse-douyin.mjs",
     "collect": "node src/collect-to-feishu.mjs",
-    "watch": "node src/watch-feishu.mjs"
+    "watch": "node src/watch-feishu.mjs",
+    "check": "node scripts/check-syntax.mjs",
+    "test": "node --test test/all.test.mjs"
   },
   "engines": {
     "node": ">=18"

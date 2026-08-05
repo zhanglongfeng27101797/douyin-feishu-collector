@@ -44,8 +44,12 @@ src/
   transcribe-media.mjs             火山/百炼/本地转写编排
   review-transcript.mjs            保守校对与尾音清理
   analyze-transcript.mjs           钩子、主题、知识点分析
+  config/                           环境变量加载与配置校验
+  feishu/                           飞书 API 客户端和字段适配
+  pipeline/                         元数据、媒体、转写、分析阶段编排
   setup-*.mjs                      创建或调整飞书字段
 scripts/                           辅助脚本与数据回填
+test/                              不依赖真实云端凭证的单元测试
 deploy/macos/                      macOS 后台运行模板
 ```
 
@@ -149,3 +153,14 @@ ENABLE_TEXT_PROOFREAD=false
 - 封面和视频源地址可能过期，飞书附件才是持久保存结果。
 - 请只采集你有权处理的内容，并遵守平台规则和相关法律。
 - `outputs/` 仅用于本机日志和导出，不进入 Git 仓库。
+
+## 开发与回归检查
+
+修改代码后先运行：
+
+```bash
+npm run check
+npm test
+```
+
+单元测试不访问真实飞书、抖音或语音服务，也不读取 `.env.local`。对接真实云服务的脚本保留在 `scripts/` 中，需要明确指定时才会运行，避免日常测试误消耗额度。

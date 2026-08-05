@@ -1,8 +1,10 @@
+import { fileURLToPath } from "node:url";
+
 const MOBILE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) " +
   "AppleWebKit/605.1.15 Mobile/15E148";
 
-function extractUrl(input) {
+export function extractDouyinUrl(input) {
   const candidates = String(input || "").match(
     /https?:\/\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]+/g,
   ) || [];
@@ -136,7 +138,7 @@ function toCollectionRecord(detail, sourceUrl) {
 }
 
 export async function parseDouyinShare(input) {
-  const sourceUrl = extractUrl(input);
+  const sourceUrl = extractDouyinUrl(input);
   const { awemeId } = await resolveAwemeId(sourceUrl);
   const detail = await fetchAwemeDetail(awemeId);
   return toCollectionRecord(detail, sourceUrl);
@@ -160,4 +162,3 @@ if (isMain) {
     process.exitCode = 1;
   });
 }
-import { fileURLToPath } from "node:url";
