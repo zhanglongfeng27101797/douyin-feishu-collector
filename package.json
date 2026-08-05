@@ -1,0 +1,14 @@
+{
+  "name": "douyin-feishu-collector-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "parse": "node src/parse-douyin.mjs",
+    "collect": "node src/collect-to-feishu.mjs",
+    "watch": "node src/watch-feishu.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

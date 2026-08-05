@@ -1,0 +1,15 @@
+.env.local
+.env.company.local
+.env.*.local
+node_modules
+.venv
+.whisper-cache
+__pycache__
+*.swp
+.DS_Store
+*.inspect.ndjson
+outputs/
+
+# 本机 LaunchAgent 文件包含绝对路径；仓库只保留 deploy/macos 下的模板。
+com.local.douyin-feishu-collector.plist
+com.local.douyin-feishu-company-collector.plist
