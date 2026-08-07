@@ -1,11 +1,21 @@
 import { createField, updateField } from "./client.mjs";
 import { createFeishuContext } from "./context.mjs";
 
+const FIELD_WRITE_INTERVAL_MS = 120;
+
 export async function ensureTableFields(
   definitions,
   { renameOnlyFieldTo = "" } = {},
 ) {
-  const { token, appToken, table, fields } = await createFeishuContext();
+  const context = await createFeishuContext();
+  return ensureFieldsInContext(context, definitions, { renameOnlyFieldTo });
+}
+
+export async function ensureFieldsInContext(
+  { token, appToken, table, fields },
+  definitions,
+  { renameOnlyFieldTo = "" } = {},
+) {
   if (
     renameOnlyFieldTo &&
     fields.length === 1 &&
@@ -39,5 +49,6 @@ export async function ensureTableFields(
 
     const data = await createField(token, appToken, table.table_id, definition);
     console.log(`[已创建] ${data.field.field_name} (${data.field.ui_type})`);
+    await new Promise((resolve) => setTimeout(resolve, FIELD_WRITE_INTERVAL_MS));
   }
 }

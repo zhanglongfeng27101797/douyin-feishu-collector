@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="抖音内容采集、转写、分析和归档的一体化本地工作台"
+    />
+    <title>流光 · 内容采集工作台</title>
+    <script>
+      (() => {
+        const storedTheme = localStorage.getItem("douyin-collector-theme");
+        document.documentElement.dataset.theme =
+          storedTheme === "light" || storedTheme === "dark"
+            ? storedTheme
+            : matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+      })();
+    </script>
+    <link rel="stylesheet" href="/styles.css?revision=workspace-v4" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" data-i18n-aria-label="nav.home">
+        <span class="brand-mark">流</span>
+        <span>
+          <strong data-i18n="brand.name">流光</strong>
+          <small data-i18n="brand.tagline">内容运营工作台</small>
+        </span>
+      </a>
+      <div class="topbar-actions">
+        <div class="system-pill" id="system-pill" data-state="loading">
+          <span class="pulse-dot"></span>
+          <span id="system-text" data-i18n="system.connecting">正在连接</span>
+        </div>
+        <button class="icon-button theme-toggle" id="theme-toggle" type="button" data-i18n-aria-label="theme.dark">
+          <span aria-hidden="true">◐</span>
+        </button>
+        <button
+          class="icon-button settings-toggle"
+          id="settings-toggle"
+          type="button"
+          data-i18n-aria-label="settings.open"
+        >
+          <span aria-hidden="true">设置</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="hero-context">
+            <span class="context-badge" data-i18n="hero.eyebrow">内容自动化</span>
+            <span data-i18n="hero.context">本地运行 · 飞书同步</span>
+          </div>
+          <h1 data-i18n="hero.title">内容采集工作台</h1>
+          <p class="hero-description" data-i18n="hero.description">
+            从抖音链接到结构化内容，统一管理解析、转写、分析与归档，每一步都可追踪、可恢复。
+          </p>
+          <div class="hero-signals" data-i18n-aria-label="hero.capabilities">
+            <span><i></i><span data-i18n="hero.signalTracking">任务状态实时同步</span></span>
+            <span><i></i><span data-i18n="hero.signalArchive">处理结果自动归档</span></span>
+          </div>
+        </div>
+
+        <form class="capture-card" id="capture-form">
+          <div class="capture-heading">
+            <span class="capture-icon" aria-hidden="true">＋</span>
+            <div>
+              <h2 data-i18n="capture.title">新建采集任务</h2>
+              <p data-i18n="capture.description">粘贴分享文案或链接，任务将自动进入处理队列</p>
+            </div>
+          </div>
+          <label class="sr-only" for="share-input" data-i18n="capture.inputLabel">抖音分享内容</label>
+          <textarea
+            id="share-input"
+            name="input"
+            rows="4"
+            maxlength="5000"
+            placeholder="7.12 复制打开抖音，看看…… https://v.douyin.com/xxxxxx/"
+            data-i18n-placeholder="capture.placeholder"
+            required
+          ></textarea>
+          <div class="capture-actions">
+            <span class="input-hint" data-i18n="capture.hint">自动识别分享文案中的短链接与标准链接</span>
+            <button class="primary-button" type="submit" id="submit-button">
+              <span data-i18n="capture.submit">创建任务</span><span aria-hidden="true">→</span>
+            </button>
+          </div>
+          <div class="capture-footnote"><span aria-hidden="true">✓</span><span data-i18n="capture.footnote">提交后可离开页面，后台会继续处理</span></div>
+          <p class="form-message" id="form-message" role="status"></p>
+        </form>
+      </section>
+
+      <section class="overview" data-i18n-aria-label="overview.title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow" data-i18n="overview.eyebrow">实时处理</p>
+            <h2 data-i18n="overview.title">任务概览</h2>
+          </div>
+          <div class="overview-actions">
+            <span class="sync-caption"><i></i><span id="sync-caption-text" data-i18n="overview.connecting">正在同步任务数据</span></span>
+            <button class="quiet-button" type="button" id="refresh-button" data-i18n="overview.refresh">刷新数据</button>
+          </div>
+        </div>
+
+        <div class="summary-grid" id="summary-grid">
+          <article><span>全部任务</span><strong>—</strong></article>
+          <article><span>正在处理</span><strong>—</strong></article>
+          <article><span>等待重试</span><strong>—</strong></article>
+          <article><span>已完成</span><strong>—</strong></article>
+        </div>
+
+        <div class="pipeline" id="pipeline" data-i18n-aria-label="pipeline.label"></div>
+      </section>
+
+      <section class="workspace">
+        <aside class="task-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow" data-i18n="queue.eyebrow">最近任务</p>
+              <h2 data-i18n="queue.title">任务队列</h2>
+            </div>
+            <span class="table-name" id="table-name">采集库</span>
+          </div>
+          <div class="task-list" id="task-list" aria-live="polite"></div>
+        </aside>
+
+        <section class="detail-panel" id="detail-panel" aria-live="polite">
+          <div class="empty-detail">
+            <span class="empty-orbit"></span>
+            <h2 data-i18n="detail.emptyTitle">选择任务查看处理详情</h2>
+            <p data-i18n="detail.emptyDescription">阶段进度、逐字稿与内容分析结果会集中显示在这里。</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <dialog class="settings-dialog" id="settings-dialog">
+      <form class="settings-form" id="settings-form">
+        <header class="settings-header">
+          <div>
+            <p class="eyebrow" data-i18n="settings.eyebrow">本机设置</p>
+            <h2 data-i18n="settings.title">配置中心</h2>
+            <p data-i18n="settings.description">连接配置保存在本机，采集结果与附件保存在飞书。</p>
+          </div>
+          <button class="dialog-close" id="settings-close" type="button" data-i18n-aria-label="settings.close">×</button>
+        </header>
+
+        <div class="settings-body">
+          <aside class="storage-note" aria-labelledby="storage-note-title">
+            <div class="storage-note-heading">
+              <span aria-hidden="true">⌁</span>
+              <div>
+                <strong id="storage-note-title" data-i18n="settings.storageLocation">数据保存位置</strong>
+                <p data-i18n="settings.storageDescription">当前无需挂载数据库，飞书多维表格就是业务数据主存储。</p>
+              </div>
+            </div>
+            <dl>
+              <div><dt data-i18n="settings.businessData">任务与分析结果</dt><dd data-i18n="settings.businessDataValue">飞书多维表格</dd></div>
+              <div><dt data-i18n="settings.mediaData">封面与视频附件</dt><dd data-i18n="settings.mediaDataValue">飞书云盘附件</dd></div>
+              <div><dt data-i18n="settings.localData">本机仅保存</dt><dd data-i18n="settings.localDataValue">.env.local 配置</dd></div>
+            </dl>
+          </aside>
+
+          <section class="settings-section">
+            <div class="settings-section-heading">
+              <h3 data-i18n="settings.feishu">飞书连接</h3>
+              <p data-i18n="settings.feishuHelp">填写自建应用凭证。App Token 可留空，由系统自动创建多维表格。</p>
+            </div>
+            <div class="settings-grid">
+              <label><span data-i18n="settings.appId">App ID</span><input name="feishuAppId" autocomplete="off" required /></label>
+              <label>
+                <span><span data-i18n="settings.appSecret">App Secret</span><b class="secret-status" id="feishu-secret-status"></b></span>
+                <input name="feishuAppSecret" type="password" autocomplete="new-password" data-i18n-placeholder="settings.secretPlaceholder" />
+              </label>
+              <label><span data-i18n="settings.appToken">App Token（可选）</span><input name="feishuAppToken" autocomplete="off" /></label>
+              <label><span data-i18n="settings.baseName">多维表格名称</span><input name="feishuBaseName" maxlength="100" /></label>
+              <label><span data-i18n="settings.tableName">数据表名称</span><input name="feishuTableName" maxlength="100" required /></label>
+            </div>
+          </section>
+
+          <section class="settings-section">
+            <div class="settings-section-heading"><h3 data-i18n="settings.ai">模型与媒体</h3></div>
+            <div class="settings-grid">
+              <label><span data-i18n="settings.aiProvider">内容模型提供方</span><select name="aiProvider"><option value="auto" data-i18n="settings.providerAuto">自动选择</option><option value="openrouter" data-i18n="settings.providerOpenrouter">OpenRouter</option><option value="dashscope" data-i18n="settings.providerDashscope">阿里云百炼</option></select></label>
+              <label>
+                <span><span data-i18n="settings.openrouterKey">OpenRouter API Key</span><b class="secret-status" id="openrouter-secret-status"></b></span>
+                <input name="openrouterApiKey" type="password" autocomplete="new-password" data-i18n-placeholder="settings.secretPlaceholder" />
+              </label>
+              <label><span data-i18n="settings.asrModel">首选转写模型</span><input name="openrouterAsrModel" autocomplete="off" /></label>
+              <label><span data-i18n="settings.analysisModel">内容分析模型</span><input name="openrouterAnalysisModel" autocomplete="off" /></label>
+              <label><span data-i18n="settings.storageMode">视频保存方式</span><select name="videoStorageMode"><option value="none" data-i18n="settings.storageNone">不保存视频</option><option value="feishu_compressed" data-i18n="settings.storageCompressed">飞书保存压缩视频</option><option value="feishu" data-i18n="settings.storageOriginal">飞书保存原视频</option></select></label>
+              <label><span data-i18n="settings.concurrency">并发任务数</span><input name="concurrency" type="number" min="1" max="5" /></label>
+            </div>
+          </section>
+        </div>
+
+        <footer class="settings-footer">
+          <div>
+            <span id="settings-source"></span>
+            <small data-i18n="settings.restartNotice">单独运行的监听器需要重启后才能读取新配置。</small>
+            <a class="base-link" id="settings-base-link" href="#" target="_blank" rel="noreferrer" hidden data-i18n="settings.openBase">打开新建的飞书表格 →</a>
+          </div>
+          <div class="settings-actions">
+            <button class="secondary-button" id="settings-save" type="submit" data-action="save" data-i18n="settings.save">仅保存配置</button>
+            <button class="primary-button" id="settings-setup" type="button" data-i18n="settings.setup">保存并准备飞书表格</button>
+          </div>
+        </footer>
+        <p class="form-message" id="settings-message" role="status"></p>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/app.js?revision=workspace-v4"></script>
+  </body>
+</html>

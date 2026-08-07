@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "node src/app.mjs",
+    "web": "node src/web/server.mjs",
     "parse": "node src/parse-douyin.mjs",
     "collect": "node src/collect-to-feishu.mjs",
     "watch": "node src/watch-feishu.mjs",

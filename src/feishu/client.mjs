@@ -37,16 +37,51 @@ export async function tenantToken(appId, appSecret) {
   return payload.tenant_access_token;
 }
 
-export async function findTable(token, appToken, tableName) {
-  const data = await api(`${API_ROOT}/bitable/v1/apps/${appToken}/tables?page_size=100`, {
+export async function createBitable(token, { name, folderToken = "" }) {
+  const data = await api(`${API_ROOT}/bitable/v1/apps`, {
     token,
+    method: "POST",
+    body: {
+      name,
+      time_zone: "Asia/Shanghai",
+      ...(folderToken ? { folder_token: folderToken } : {}),
+    },
   });
-  const table = (data.items || []).find((item) => item.name === tableName);
+  return data.app;
+}
+
+export async function listTables(token, appToken) {
+  const data = await api(
+    `${API_ROOT}/bitable/v1/apps/${appToken}/tables?page_size=100`,
+    { token },
+  );
+  return data.items || [];
+}
+
+export async function findTable(token, appToken, tableName) {
+  const tables = await listTables(token, appToken);
+  const table = tables.find((item) => item.name === tableName);
   if (!table) {
-    const available = (data.items || []).map((item) => item.name).join("、");
+    const available = tables.map((item) => item.name).join("、");
     throw new Error(`未找到数据表“${tableName}”，当前表: ${available}`);
   }
   return table;
+}
+
+export async function createTable(token, appToken, name) {
+  return api(`${API_ROOT}/bitable/v1/apps/${appToken}/tables`, {
+    token,
+    method: "POST",
+    body: { table: { name } },
+  });
+}
+
+export function renameTable(token, appToken, tableId, name) {
+  return api(`${API_ROOT}/bitable/v1/apps/${appToken}/tables/${tableId}`, {
+    token,
+    method: "PATCH",
+    body: { name },
+  });
 }
 
 export async function listFields(token, appToken, tableId) {
@@ -71,7 +106,12 @@ export function updateField(token, appToken, tableId, fieldId, definition) {
   );
 }
 
-export async function listAllRecords(token, appToken, tableId) {
+export async function listAllRecords(
+  token,
+  appToken,
+  tableId,
+  { fieldNames = [] } = {},
+) {
   const records = [];
   let pageToken = "";
   do {
@@ -79,12 +119,23 @@ export async function listAllRecords(token, appToken, tableId) {
       `${API_ROOT}/bitable/v1/apps/${appToken}/tables/${tableId}/records`,
     );
     url.searchParams.set("page_size", "500");
+    if (fieldNames.length > 0) {
+      url.searchParams.set("field_names", JSON.stringify(fieldNames));
+    }
     if (pageToken) url.searchParams.set("page_token", pageToken);
     const data = await api(url.toString(), { token });
     records.push(...(data.items || []));
     pageToken = data.has_more ? data.page_token || "" : "";
   } while (pageToken);
   return records;
+}
+
+export async function getRecord(token, appToken, tableId, recordId) {
+  const data = await api(
+    `${API_ROOT}/bitable/v1/apps/${appToken}/tables/${tableId}/records/${recordId}`,
+    { token },
+  );
+  return data.record;
 }
 
 export function updateRecord(token, appToken, tableId, recordId, fields) {

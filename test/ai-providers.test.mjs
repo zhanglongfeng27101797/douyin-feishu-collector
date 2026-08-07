@@ -13,6 +13,7 @@ import {
   transcriptQualityIssues,
   transcribeWithOpenRouter,
 } from "../src/ai/openrouter.mjs";
+import { analyzeTranscript } from "../src/ai/analysis.mjs";
 import { collectCloudTranscripts } from "../src/ai/transcription.mjs";
 
 async function withEnvironment(values, callback) {
@@ -92,6 +93,43 @@ test("内容分析默认使用低成本 Qwen 模型", { concurrency: false }, as
         getChatModel("analysis", "openrouter"),
         "qwen/qwen3.7-flash",
       );
+    },
+  );
+});
+
+test("内容分析提示词适用于通用短视频而非固定行业", { concurrency: false }, async () => {
+  await withEnvironment(
+    {
+      AI_PROVIDER: "openrouter",
+      OPENROUTER_API_KEY: "test-openrouter-key",
+      OPENROUTER_ANALYSIS_MODEL: "test/model",
+    },
+    async () => {
+      await withFetch(async (_url, options) => {
+        const body = JSON.parse(options.body);
+        assert.match(body.messages[0].content, /短视频内容结构分析员/);
+        assert.doesNotMatch(body.messages[0].content, /母婴科普短视频/);
+        return new Response(
+          JSON.stringify({
+            choices: [{
+              message: {
+                content: JSON.stringify({
+                  hook: "第一次去斯里兰卡应该注意什么？",
+                  hookTypes: ["问题提问"],
+                  theme: "斯里兰卡旅行准备",
+                  coreKnowledge: "提前确认签证、交通和当地支付方式。",
+                }),
+              },
+            }],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }, async () => {
+        const result = await analyzeTranscript(
+          "第一次去斯里兰卡应该注意什么？提前确认签证、交通和当地支付方式。",
+        );
+        assert.equal(result["主题"], "斯里兰卡旅行准备");
+      });
     },
   );
 });
