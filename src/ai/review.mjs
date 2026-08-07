@@ -1,5 +1,4 @@
-const REVIEW_API_URL =
-  "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+import { callJsonModel } from "./chat.mjs";
 
 function normalizeIssues(value) {
   if (!Array.isArray(value)) return [];
@@ -12,45 +11,10 @@ function normalizeIssues(value) {
     .filter((item) => item.original && item.suggestion);
 }
 
-async function callJsonModel(model, messages) {
-  const apiKey = process.env.DASHSCOPE_API_KEY?.trim();
-  const response = await fetch(REVIEW_API_URL, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      response_format: { type: "json_object" },
-      messages,
-    }),
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(
-      `${model} 调用失败: ${payload?.error?.message || payload?.message || `HTTP ${response.status}`}`,
-    );
-  }
-  const content = payload?.choices?.[0]?.message?.content;
-  if (!content) throw new Error(`${model} 未返回内容`);
-  try {
-    return JSON.parse(content);
-  } catch {
-    throw new Error(`${model} 没有返回有效 JSON`);
-  }
-}
-
 export async function proofreadTranscript(
   transcript,
   { title = "", description = "", hashtags = "", referenceTranscript = "" } = {},
 ) {
-  const apiKey = process.env.DASHSCOPE_API_KEY?.trim();
-  if (!apiKey) throw new Error("缺少 DASHSCOPE_API_KEY，无法审核逐字稿");
-  const reviewModel =
-    process.env.BAILIAN_REVIEW_MODEL || "qwen3.7-flash-2026-07-15";
-  const verifyModel = process.env.BAILIAN_VERIFY_MODEL || "qwen3.7-plus";
   const context = `视频标题：${title}\n视频正文：${description}\n话题：${hashtags}`;
   const hasReference = Boolean(referenceTranscript.trim());
   const reviewInstruction = hasReference
@@ -68,16 +32,20 @@ export async function proofreadTranscript(
       models: "双 ASR 一致，无需模型修改",
     };
   }
-  const firstPass = await callJsonModel(reviewModel, [
-        {
-          role: "system",
-          content: reviewInstruction,
-        },
-        {
-          role: "user",
-          content: `${context}\n\n主逐字稿：\n${transcript}\n\n第二份独立听写：\n${referenceTranscript}`,
-        },
-  ]);
+  const firstPassResult = await callJsonModel({
+    purpose: "review",
+    messages: [
+      {
+        role: "system",
+        content: reviewInstruction,
+      },
+      {
+        role: "user",
+        content: `${context}\n\n主逐字稿：\n${transcript}\n\n第二份独立听写：\n${referenceTranscript}`,
+      },
+    ],
+  });
+  const firstPass = firstPassResult.value;
   const candidates = normalizeIssues(firstPass.issues).filter(
     (item) =>
       transcript.includes(item.original) &&
@@ -89,21 +57,25 @@ export async function proofreadTranscript(
       text: transcript,
       changes: [],
       unresolved: [],
-      models: `${reviewModel} + ${verifyModel}`,
+      models: `${firstPassResult.provider} ${firstPassResult.model}`,
     };
   }
 
-  const verification = await callJsonModel(verifyModel, [
-    {
-      role: "system",
-      content:
-        "你是保守的中文逐字稿复核员。逐项判断候选替换是否几乎确定正确。第二份独立听写只作为证据。只批准不改变原句表达、语序、语义和口语风格的错别字、同音字、专有名词或标点修正。没有充分依据必须拒绝，不得提出新候选。返回严格JSON：{approved:[{original,suggestion,confidence,reason}]}，confidence为0到1。",
-    },
-    {
-      role: "user",
-      content: `${context}\n\n主逐字稿：\n${transcript}\n\n第二份独立听写：\n${referenceTranscript}\n\n待复核候选：\n${JSON.stringify(candidates)}`,
-    },
-  ]);
+  const verificationResult = await callJsonModel({
+    purpose: "verify",
+    messages: [
+      {
+        role: "system",
+        content:
+          "你是保守的中文逐字稿复核员。逐项判断候选替换是否几乎确定正确。第二份独立听写只作为证据。只批准不改变原句表达、语序、语义和口语风格的错别字、同音字、专有名词或标点修正。没有充分依据必须拒绝，不得提出新候选。返回严格JSON：{approved:[{original,suggestion,confidence,reason}]}，confidence为0到1。",
+      },
+      {
+        role: "user",
+        content: `${context}\n\n主逐字稿：\n${transcript}\n\n第二份独立听写：\n${referenceTranscript}\n\n待复核候选：\n${JSON.stringify(candidates)}`,
+      },
+    ],
+  });
+  const verification = verificationResult.value;
   const candidateKeys = new Set(
     candidates.map((item) => `${item.original}\u0000${item.suggestion}`),
   );
@@ -141,6 +113,6 @@ export async function proofreadTranscript(
     unresolved: candidates.filter(
       (item) => !appliedKeys.has(`${item.original}\u0000${item.suggestion}`),
     ),
-    models: `${reviewModel} + ${verifyModel}`,
+    models: `${firstPassResult.provider} ${firstPassResult.model} + ${verificationResult.model}`,
   };
 }

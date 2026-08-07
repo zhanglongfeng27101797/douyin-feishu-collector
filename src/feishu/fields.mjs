@@ -1,5 +1,5 @@
-function adaptValue(value, field) {
-  if (value == null || value === "") return undefined;
+function adaptValue(value, field, includeEmpty) {
+  if (value == null || value === "") return includeEmpty ? value : undefined;
   if (field.type === 4) return Array.isArray(value) ? value : [String(value)];
   if (field.type === 17) return Array.isArray(value) ? value : [value];
   if (field.type === 5) return new Date(value).getTime();
@@ -9,13 +9,13 @@ function adaptValue(value, field) {
   return value;
 }
 
-export function mapRecord(record, fields) {
+export function mapRecord(record, fields, { includeEmpty = false } = {}) {
   const byName = new Map(fields.map((field) => [field.field_name, field]));
   const mapped = {};
   for (const [name, value] of Object.entries(record)) {
     const field = byName.get(name);
     if (!field) continue;
-    const adapted = adaptValue(value, field);
+    const adapted = adaptValue(value, field, includeEmpty);
     if (adapted !== undefined) mapped[name] = adapted;
   }
   return mapped;

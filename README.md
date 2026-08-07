@@ -1,6 +1,6 @@
 # 抖音 → 飞书多维表格采集器
 
-把抖音“分享 → 复制链接”得到的整段文本粘贴到飞书多维表格，后台服务会自动完成链接解析、作品信息采集、封面与原视频上传、语音转写和母婴科普内容分析。
+把抖音“分享 → 复制链接”得到的整段文本粘贴到飞书多维表格，后台服务会自动完成链接解析、作品信息采集、压缩音频提取、语音转写和母婴科普内容分析。
 
 > 当前为本地运行的 MVP。代码可供协作者整理架构；真实飞书、阿里云和火山引擎密钥不会提交到仓库。
 
@@ -9,8 +9,8 @@
 - 从混有口令、时间、话题和说明文字的分享内容中提取抖音链接。
 - 获取标题、作者、作品 ID、发布时间、时长、分辨率、互动数据和话题标签。
 - 按作品 ID 去重，避免重复写入。
-- 下载封面和无水印视频流，上传为飞书附件后立即清理本机临时文件。
-- 火山引擎录音文件极速版作为主听写，百炼 Paraformer 作为旁证。
+- 默认只临时提取 32 kbps MP3 音频，不保存完整视频；可显式开启飞书视频归档。
+- OpenRouter、火山引擎或百炼均可完成语音转写，按本地配置自动选择。
 - 保守修正错别字和标点，不改写原句表达与语义，并清理平台尾音。
 - 从逐字稿生成：开头钩子、钩子类型、20 字内主题、核心知识点。
 - 同一台 Mac 可用不同环境文件同时监听个人版和企业版飞书表格。
@@ -24,41 +24,41 @@
         ↓
 提取链接并解析抖音作品数据
         ↓
-写入元数据、话题标签、封面和视频附件
+写入元数据和话题标签
         ↓
-临时提取音频 → 双云 ASR → 保守校对
+单次读取视频流 → 临时提取压缩音频 → ASR → 保守校对
         ↓
 写入最终逐字稿 → 生成母婴内容分析字段
         ↓
-删除本机临时媒体文件
+上传封面 → 可选归档视频 → 删除本机临时媒体文件
 ```
 
 ## 目录结构
 
 ```text
 src/
-  watch-feishu.mjs                 飞书轮询入口
-  collect-to-feishu.mjs            单条采集与字段写入
-  parse-douyin.mjs                 分享文本和抖音页面解析
-  feishu-media.mjs                 封面、视频附件上传
-  transcribe-media.mjs             火山/百炼/本地转写编排
-  review-transcript.mjs            保守校对与尾音清理
-  analyze-transcript.mjs           钩子、主题、知识点分析
-  config/                           环境变量加载与配置校验
-  feishu/                           飞书 API 客户端和字段适配
+  ai/                               转写、校对、分析和模型适配
+  config/                           环境加载与运行参数读取
+  core/                             统一错误模型和 HTTP 请求策略
+  feishu/                           飞书 API、字段、文件和初始化适配
+  media/                            视频候选地址和 FFmpeg 媒体准备
   pipeline/                         元数据、媒体、转写、分析阶段编排
-  setup-*.mjs                      创建或调整飞书字段
-scripts/                           辅助脚本与数据回填
-test/                              不依赖真实云端凭证的单元测试
-deploy/macos/                      macOS 后台运行模板
+    job-state.mjs                   任务租约、状态和失败退避策略
+  collect-to-feishu.mjs             单条采集入口
+  parse-douyin.mjs                  分享文本和抖音页面解析
+  setup-fields.mjs                  统一字段初始化入口
+  watch-feishu.mjs                  飞书轮询入口
+scripts/                            静态检查脚本
+test/                               不依赖真实云端凭证的单元测试
+deploy/macos/                       macOS 后台运行模板
 ```
 
 ## 运行要求
 
 - Node.js 18 或更高版本
-- FFmpeg（转写时从视频流提取音频）
+- FFmpeg（由项目依赖提供；`FFMPEG_PATH` 可覆盖）
 - 飞书自建应用，并具有多维表格读写及文件上传权限
-- 至少配置一个语音识别服务：火山引擎或阿里云百炼
+- 至少配置一个语音识别服务：OpenRouter、火山引擎或阿里云百炼
 
 ## 本地配置
 
@@ -76,11 +76,54 @@ cp .env.example .env.local
 | `FEISHU_APP_TOKEN` | 多维表格链接中 `/base/` 后的 token |
 | `FEISHU_TABLE_NAME` | 监听的数据表名称，默认“采集库” |
 | `FEISHU_RECORD_CONCURRENCY` | 同时处理的记录数，默认 2，范围 1～5 |
+| `VIDEO_STORAGE_MODE` | `none` 默认不保存；`feishu_compressed` 归档 720p 压缩视频；`feishu` 保留旧的原视频归档能力 |
+| `VIDEO_ARCHIVE_MAX_WIDTH` | 压缩归档最大宽度，默认 720，范围 360～2160 |
+| `VIDEO_ARCHIVE_CRF` | H.264 质量参数，默认 28，范围 18～40；越大文件越小 |
+| `FFMPEG_PATH` | 可选的外部 FFmpeg 路径；留空使用项目自带版本 |
+| `PIPELINE_LEASE_SECONDS` | 单次处理租约，默认 900 秒；超时后允许自动接管 |
+| `PIPELINE_MAX_ATTEMPTS` | 最大尝试次数，默认 5 |
+| `PIPELINE_RETRY_BASE_SECONDS` | 第一次失败后的基础等待时间，默认 60 秒 |
+| `PIPELINE_RETRY_MAX_SECONDS` | 指数退避的最长等待时间，默认 3600 秒 |
+| `HTTP_TIMEOUT_MS` | 普通 HTTP 请求超时，默认 30000 毫秒 |
+| `HTTP_MAX_RETRIES` | 幂等 HTTP 请求最大重试次数，默认 2 |
+| `HTTP_RETRY_BASE_MS` | HTTP 指数退避基础时间，默认 500 毫秒 |
+| `HTTP_RETRY_MAX_MS` | 单次 HTTP 重试最长等待时间，默认 30000 毫秒 |
+| `AI_HTTP_TIMEOUT_MS` | ASR 和大模型请求超时，默认 180000 毫秒 |
+| `MEDIA_HTTP_TIMEOUT_MS` | 媒体下载和上传超时，默认 600000 毫秒 |
+| `AI_PROVIDER` | 文本模型提供方；`auto` 优先 OpenRouter，其次百炼 |
+| `ASR_MODE` | `primary` 仅首选、`fallback` 失败降级、`compare` 调用全部服务 |
+| `OPENROUTER_API_KEY` | OpenRouter 统一 API Key，可同时用于转写和内容分析 |
+| `OPENROUTER_ASR_MODEL` | OpenRouter 主转写模型，默认 Whisper Large V3 Turbo |
+| `OPENROUTER_ASR_FALLBACK_MODEL` | 主转写失败或未通过质量门控时使用的模型 |
+| `OPENROUTER_ASR_QUALITY_GATE` | 是否检测过短、有效文本过少和异常重复，默认开启 |
+| `OPENROUTER_ANALYSIS_MODEL` | OpenRouter 内容分析主模型，默认 Qwen 3.7 Flash |
+| `OPENROUTER_ANALYSIS_FALLBACK_MODELS` | 逗号分隔的备用模型链；默认依次使用 GPT-OSS 20B、DeepSeek V4 Flash |
+| `OPENROUTER_ANALYSIS_FALLBACK_MODEL` | 兼容旧配置的单个备用模型，会接在主模型之后 |
 | `VOLCENGINE_SPEECH_API_KEY` | 火山引擎豆包语音新版 API Key |
 | `DASHSCOPE_API_KEY` | 阿里云百炼 API Key |
 | `BAILIAN_VOCABULARY_ID` | 可选的母婴专业热词表 ID |
 
 `.env.local`、`.env.company.local` 等真实配置已被 Git 忽略，禁止把密钥写进源码、README、日志或提交记录。
+
+## 架构边界
+
+代码保持单体部署，但按职责分层：
+
+```text
+命令入口（watch / collect / setup / scripts）
+        ↓
+流水线编排（pipeline）
+        ↓
+飞书、抖音、媒体、ASR 和内容分析适配器
+        ↓
+统一配置、错误模型和 HTTP 传输（config / core）
+```
+
+- 入口只负责加载参数并启动用例。
+- 流水线只负责阶段顺序、租约、状态和失败聚合。
+- 外部系统细节保留在各自适配器中，不进入任务状态模块。
+- 所有网络请求通过统一 HTTP 客户端执行。GET、PUT 等幂等请求可自动重试；POST 默认不重放，避免重复创建任务或重复消费额度。
+- 飞书连接、字段适配和字段初始化统一由 `feishu/` 提供，辅助脚本不再自行拼接接口。
 
 ## 使用方法
 
@@ -106,21 +149,25 @@ npm run watch
 
 ## 飞书字段初始化
 
-按当前代码为目标表创建封面、视频附件和内容分析字段：
+按当前代码为目标表创建采集、转写、可选附件和内容分析字段：
 
 ```bash
-node src/setup-cover-field.mjs
-node src/setup-video-attachment.mjs
-node src/setup-content-analysis-fields.mjs
+npm run setup:fields
 ```
+
+`setup:fields` 会一次性创建采集、媒体、转写、内容分析和任务状态字段；若目标表是刚创建的空表，还会把唯一的默认字段重命名为“抖音分享内容（粘贴这里）”。旧的 `setup:pipeline` npm 命令仍可使用，内部复用同一个统一入口，已有部署无需修改。
+
+任务状态字段包括处理阶段、执行 ID、租约、尝试次数、下次重试时间和错误代码。监听器依靠这些字段在进程重启后恢复未完成任务；缺少字段时仍可运行，但退避信息只保存在当前进程内。
+
+任务执行采用租约而不是永久的“处理中”标记：有效租约会让后续轮询跳过该记录，租约过期后自动恢复。临时错误按指数退避重试，达到最大次数或遇到明确的输入错误后标记为 `permanent_failed`。修正数据后可清空“任务状态”和“尝试次数”以重新进入队列。
 
 为第二个飞书企业执行时指定环境文件：
 
 ```bash
-ENV_FILE=.env.company.local node src/setup-content-analysis-fields.mjs
+ENV_FILE=.env.company.local npm run setup:fields
 ```
 
-## 双云语音识别策略
+## 语音识别策略
 
 推荐配置：
 
@@ -131,7 +178,7 @@ BAILIAN_REVIEW_MODEL=qwen3.7-flash-2026-07-15
 ENABLE_TEXT_PROOFREAD=false
 ```
 
-火山结果作为主稿，Paraformer 仅作为独立旁证。只有证据支持时才修正最小范围的错字或标点；程序不会润色、压缩或改变原句语义。飞书只保存一个最终“视频逐字稿”。若只配置一个云服务，则使用可用服务；配置云服务后不会自动降级到耗时较长的本机 Whisper。
+默认 `ASR_MODE=fallback`：按照 OpenRouter、火山、百炼的顺序选择已配置服务，首选失败时才调用下一个，避免重复费用和等待。`primary` 只调用第一个已配置服务；旧的多服务旁证方式通过 `compare` 保留。只有证据支持时才修正最小范围的错字或标点；程序不会润色、压缩或改变原句语义。飞书只保存一个最终“视频逐字稿”。配置云服务后不会自动降级到耗时较长的本机 Whisper。
 
 ## 母婴科普内容分析
 
@@ -151,7 +198,9 @@ ENABLE_TEXT_PROOFREAD=false
 ## 安全与限制
 
 - 抖音接口和页面结构可能变化，解析逻辑需要随平台更新。
-- 封面和视频源地址可能过期，飞书附件才是持久保存结果。
+- 封面和视频源地址可能过期；如确有合规归档需求，优先设置 `VIDEO_STORAGE_MODE=feishu_compressed`，需要原文件时仍可使用旧的 `feishu`。
+- 压缩归档使用 720p、H.264 CRF 28、AAC 48kbps；文件大小取决于画面复杂度，会增加本机编码开销，但不改变转写音频质量。
+- OpenRouter 默认使用 Whisper Large V3 Turbo；调用失败或逐字稿过短、有效文本过少、异常重复时自动回退 Large V3。设置 `OPENROUTER_ASR_QUALITY_GATE=false` 可关闭质量门控。
 - 解析器会按码率和分辨率保存多个视频候选地址；下载或音轨提取失败时自动换源，全部失效时仅重新解析该作品一次。
 - 请只采集你有权处理的内容，并遵守平台规则和相关法律。
 - `outputs/` 仅用于本机日志和导出，不进入 Git 仓库。
@@ -165,4 +214,4 @@ npm run check
 npm test
 ```
 
-单元测试不访问真实飞书、抖音或语音服务，也不读取 `.env.local`。对接真实云服务的脚本保留在 `scripts/` 中，需要明确指定时才会运行，避免日常测试误消耗额度。
+单元测试不访问真实飞书、抖音或语音服务，也不读取 `.env.local`，不会在日常回归中消耗云服务额度。

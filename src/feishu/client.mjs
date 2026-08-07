@@ -1,7 +1,9 @@
+import { httpRequest } from "../core/http.mjs";
+
 const API_ROOT = "https://open.feishu.cn/open-apis";
 
 export async function api(url, { token, method = "GET", body } = {}) {
-  const response = await fetch(url, {
+  const response = await httpRequest(url, {
     method,
     headers: {
       ...(token ? { authorization: `Bearer ${token}` } : {}),
@@ -19,11 +21,15 @@ export async function api(url, { token, method = "GET", body } = {}) {
 }
 
 export async function tenantToken(appId, appSecret) {
-  const response = await fetch(`${API_ROOT}/auth/v3/tenant_access_token/internal`, {
-    method: "POST",
-    headers: { "content-type": "application/json; charset=utf-8" },
-    body: JSON.stringify({ app_id: appId, app_secret: appSecret }),
-  });
+  const response = await httpRequest(
+    `${API_ROOT}/auth/v3/tenant_access_token/internal`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ app_id: appId, app_secret: appSecret }),
+    },
+    { maxRetries: 2 },
+  );
   const payload = await response.json();
   if (!response.ok || payload.code) {
     throw new Error(`获取飞书凭证失败: ${payload.msg || response.status}`);
@@ -51,6 +57,20 @@ export async function listFields(token, appToken, tableId) {
   return data.items || [];
 }
 
+export function createField(token, appToken, tableId, definition) {
+  return api(
+    `${API_ROOT}/bitable/v1/apps/${appToken}/tables/${tableId}/fields`,
+    { token, method: "POST", body: definition },
+  );
+}
+
+export function updateField(token, appToken, tableId, fieldId, definition) {
+  return api(
+    `${API_ROOT}/bitable/v1/apps/${appToken}/tables/${tableId}/fields/${fieldId}`,
+    { token, method: "PUT", body: definition },
+  );
+}
+
 export async function listAllRecords(token, appToken, tableId) {
   const records = [];
   let pageToken = "";
@@ -71,6 +91,13 @@ export function updateRecord(token, appToken, tableId, recordId, fields) {
   return api(
     `${API_ROOT}/bitable/v1/apps/${appToken}/tables/${tableId}/records/${recordId}`,
     { token, method: "PUT", body: { fields } },
+  );
+}
+
+export function createRecord(token, appToken, tableId, fields) {
+  return api(
+    `${API_ROOT}/bitable/v1/apps/${appToken}/tables/${tableId}/records`,
+    { token, method: "POST", body: { fields } },
   );
 }
 

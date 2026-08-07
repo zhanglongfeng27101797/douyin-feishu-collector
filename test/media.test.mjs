@@ -5,9 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import {
   MediaDownloadError,
-  isRefreshableMediaError,
   validateDownloadedMedia,
-} from "../src/feishu-media.mjs";
+} from "../src/media/download.mjs";
 
 async function withTempFile(bytes, callback) {
   const directory = await mkdtemp(path.join(tmpdir(), "media-test-"));
@@ -46,14 +45,4 @@ test("媒体校验拒绝伪装成视频的网页", async () => {
       (error) => error instanceof MediaDownloadError && error.code === "not_media_content",
     );
   });
-});
-
-test("候选地址耗尽属于可重新解析的媒体错误", () => {
-  assert.equal(
-    isRefreshableMediaError(
-      new MediaDownloadError("失效", { code: "media_candidates_exhausted" }),
-    ),
-    true,
-  );
-  assert.equal(isRefreshableMediaError(new Error("飞书上传失败")), false);
 });

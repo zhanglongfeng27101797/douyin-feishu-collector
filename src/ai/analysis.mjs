@@ -1,5 +1,4 @@
-const ANALYSIS_API_URL =
-  "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+import { callJsonModel } from "./chat.mjs";
 
 export const HOOK_TYPES = [
   "问题提问",
@@ -69,18 +68,33 @@ function normalizeCoreKnowledge(value) {
     .slice(0, 3000);
 }
 
+function normalizeAnalysis(value, transcript) {
+  return {
+    "开头钩子": normalizeHook(value?.hook, transcript),
+    "钩子类型": normalizeTypes(value?.hookTypes),
+    "主题": normalizeTheme(value?.theme),
+    "核心知识点": normalizeCoreKnowledge(
+      value?.coreKnowledge ?? value?.corePoints,
+    ),
+  };
+}
+
+function isCompleteAnalysis(value, transcript) {
+  const normalized = normalizeAnalysis(value, transcript);
+  return Boolean(
+    normalized["开头钩子"] &&
+      normalized["钩子类型"].length &&
+      normalized["主题"] &&
+      normalized["核心知识点"],
+  );
+}
+
 export async function analyzeTranscript(
   transcript,
   { title = "", description = "", hashtags = "" } = {},
 ) {
-  const apiKey = process.env.DASHSCOPE_API_KEY?.trim();
-  if (!apiKey) throw new Error("缺少 DASHSCOPE_API_KEY，无法分析逐字稿");
   const source = cleanText(transcript);
   if (!source) throw new Error("逐字稿为空，无法分析");
-  const model =
-    process.env.BAILIAN_ANALYSIS_MODEL ||
-    process.env.BAILIAN_REVIEW_MODEL ||
-    "qwen3.7-flash-2026-07-15";
 
   const system = `你是母婴科普短视频的内容结构分析员。输入中的“最终逐字稿”是唯一知识事实来源；标题、正文和话题仅用于理解语境，不能据此补充逐字稿没有讲过的知识。
 
@@ -93,53 +107,24 @@ export async function analyzeTranscript(
 只返回严格JSON，不要解释：
 {"hook":"原文","hookTypes":["标签"],"theme":"一句话主题","coreKnowledge":"根据原稿结构生成的分点内容或递进段落"}`;
 
-  const response = await fetch(ANALYSIS_API_URL, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: system },
-        {
-          role: "user",
-          content: `视频标题：${cleanText(title)}\n视频正文：${cleanText(description)}\n话题标签：${cleanText(hashtags)}\n\n最终逐字稿：\n${source}`,
-        },
-      ],
-    }),
+  const { value: parsed, model, provider } = await callJsonModel({
+    purpose: "analysis",
+    validate: (value) => isCompleteAnalysis(value, source),
+    messages: [
+      { role: "system", content: system },
+      {
+        role: "user",
+        content: `视频标题：${cleanText(title)}\n视频正文：${cleanText(description)}\n话题标签：${cleanText(hashtags)}\n\n最终逐字稿：\n${source}`,
+      },
+    ],
   });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(
-      `${model} 内容分析失败：${payload?.error?.message || payload?.message || `HTTP ${response.status}`}`,
-    );
-  }
-  const content = payload?.choices?.[0]?.message?.content;
-  if (!content) throw new Error(`${model} 未返回内容分析结果`);
-  let parsed;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    throw new Error(`${model} 没有返回有效的内容分析 JSON`);
-  }
 
-  const result = {
-    "开头钩子": normalizeHook(parsed.hook, source),
-    "钩子类型": normalizeTypes(parsed.hookTypes),
-    "主题": normalizeTheme(parsed.theme),
-    "核心知识点": normalizeCoreKnowledge(
-      parsed.coreKnowledge ?? parsed.corePoints,
-    ),
-  };
+  const result = normalizeAnalysis(parsed, source);
   if (!result["开头钩子"] || !result["钩子类型"].length) {
     throw new Error(`${model} 返回的钩子分析不完整`);
   }
   if (!result["主题"] || !result["核心知识点"]) {
     throw new Error(`${model} 返回的主题或核心知识点为空`);
   }
-  return { ...result, model };
+  return { ...result, model: `${provider} ${model}` };
 }
