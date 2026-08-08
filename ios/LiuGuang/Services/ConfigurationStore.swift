@@ -5,7 +5,7 @@ struct StoredWorkerSession: Sendable {
     let accessToken: String
 }
 
-struct ConfigurationStore: Sendable {
+struct ConfigurationStore {
     private enum Key {
         static let workerURL = "worker.baseURL"
         static let workerToken = "worker.accessToken"
@@ -40,4 +40,3 @@ struct ConfigurationStore: Sendable {
         try keychain.remove(Key.workerToken)
     }
 }
-

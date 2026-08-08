@@ -10,7 +10,7 @@ struct SubmitToLiuGuangIntent: AppIntent {
     var source: String
 
     static var parameterSummary: some ParameterSummary {
-        Summary("采集 \(.$source)")
+        Summary("采集 \(\.$source)")
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
@@ -42,4 +42,3 @@ struct LiuGuangShortcuts: AppShortcutsProvider {
         )
     }
 }
-

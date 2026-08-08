@@ -24,7 +24,7 @@ struct OnboardingView: View {
                     .padding(.vertical, 12)
                 }
 
-                Section("任务节点") {
+                Section {
                     TextField("https://你的节点域名", text: $baseURL)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.URL)
@@ -32,6 +32,8 @@ struct OnboardingView: View {
                     SecureField("访问令牌", text: $token)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                } header: {
+                    Text("任务节点")
                 } footer: {
                     Text("正式使用必须填写 HTTPS 地址。令牌仅保存在本机 Keychain。")
                 }
@@ -102,4 +104,3 @@ private struct CheckRow: View {
         }
     }
 }
-
