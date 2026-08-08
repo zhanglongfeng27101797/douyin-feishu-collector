@@ -13,6 +13,8 @@ outputs/
 # Xcode 本机界面状态和个人 scheme 设置
 **/xcuserdata/
 *.xcuserstate
+ios/build/
+ios/DerivedData/
 
 # 本机 LaunchAgent 文件包含绝对路径；仓库只保留 deploy/macos 下的模板。
 com.local.douyin-feishu-collector.plist
