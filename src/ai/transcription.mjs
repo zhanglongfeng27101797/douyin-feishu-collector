@@ -1,16 +1,15 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { uniqueHttpUrls } from "./media/candidates.mjs";
+import { readFile } from "node:fs/promises";
+import { extname, resolve } from "node:path";
+import { transcribeWithOpenRouter } from "./openrouter.mjs";
+import { getAsrSettings } from "../config/env.mjs";
+import { CollectorError } from "../core/errors.mjs";
+import { aiHttpRequest } from "../core/http.mjs";
+import { prepareMedia } from "../media/ffmpeg.mjs";
 
 const VOLCENGINE_FLASH_URL =
   "https://openspeech.bytedance.com/api/v3/auc/bigmodel/recognize/flash";
 const DASHSCOPE_DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/api/v1";
-const DESKTOP_UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
-  "AppleWebKit/537.36 Chrome/126.0 Safari/537.36";
-
 function run(command, args, { captureStdout = false } = {}) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn(command, args, {
@@ -26,7 +25,19 @@ function run(command, args, { captureStdout = false } = {}) {
       stderr += chunk;
       process.stderr.write(chunk);
     });
-    child.on("error", reject);
+    child.on("error", (error) => {
+      if (error?.code === "ENOENT") {
+        reject(
+          new CollectorError(`找不到本地转写运行时：${command}`, {
+            code: "missing_local_whisper",
+            retryable: false,
+            cause: error,
+          }),
+        );
+        return;
+      }
+      reject(error);
+    });
     child.on("close", (code) => {
       if (code === 0) {
         resolvePromise({ stdout, stderr });
@@ -38,111 +49,117 @@ function run(command, args, { captureStdout = false } = {}) {
   });
 }
 
-export async function transcribeVideo(videoUrls, { model, prompt = "" } = {}) {
-  const candidates = uniqueHttpUrls(videoUrls);
-  if (!candidates.length) throw new Error("缺少视频地址");
-  const workDir = await mkdtemp(join(tmpdir(), "douyin-transcribe-"));
-  const audioPath = join(workDir, "audio.wav");
-  try {
-    let sourceVideoUrl = "";
-    const extractionErrors = [];
-    for (const videoUrl of candidates) {
-      try {
-        await run(process.env.FFMPEG_PATH || "/opt/homebrew/bin/ffmpeg", [
-          "-hide_banner",
-          "-loglevel",
-          "error",
-          "-y",
-          "-user_agent",
-          DESKTOP_UA,
-          "-i",
-          videoUrl,
-          "-vn",
-          "-ac",
-          "1",
-          "-ar",
-          "16000",
-          "-c:a",
-          "pcm_s16le",
-          audioPath,
-        ]);
-        sourceVideoUrl = videoUrl;
-        break;
-      } catch (error) {
-        extractionErrors.push(String(error.message || error));
+function configuredCloudProviders() {
+  return [
+    {
+      name: "OpenRouter",
+      configured: Boolean(process.env.OPENROUTER_API_KEY?.trim()),
+      run: transcribeWithOpenRouter,
+    },
+    {
+      name: "火山",
+      configured: Boolean(
+        process.env.VOLCENGINE_SPEECH_API_KEY?.trim() ||
+          (process.env.VOLCENGINE_SPEECH_APP_KEY?.trim() &&
+            process.env.VOLCENGINE_SPEECH_ACCESS_KEY?.trim()),
+      ),
+      run: transcribeWithVolcengine,
+    },
+    {
+      name: "百炼",
+      configured: Boolean(
+        (process.env.DASHSCOPE_API_KEY || process.env.BAILIAN_API_KEY)?.trim(),
+      ),
+      run: transcribeWithBailian,
+    },
+  ].filter((provider) => provider.configured);
+}
+
+export async function collectCloudTranscripts(
+  audioPath,
+  {
+    mode = getAsrSettings().mode,
+    providers = configuredCloudProviders(),
+  } = {},
+) {
+  const selected = mode === "primary" ? providers.slice(0, 1) : providers;
+  const results = [];
+  const errors = [];
+  for (const provider of selected) {
+    try {
+      const result = await provider.run(audioPath);
+      if (result) {
+        results.push(result);
+        if (mode !== "compare") break;
       }
-    }
-    if (!sourceVideoUrl) {
-      throw new Error(
-        `全部 ${candidates.length} 个视频地址均无法提取音频：${[...new Set(extractionErrors)].slice(0, 2).join("；")}`,
-      );
-    }
-    const cloudResults = [];
-    const cloudErrors = [];
-    try {
-      const volcengine = await transcribeWithVolcengine(audioPath);
-      if (volcengine) cloudResults.push(volcengine);
     } catch (error) {
-      cloudErrors.push(`火山：${error.message}`);
-      console.error(`[火山识别失败] ${error.message}`);
+      errors.push({ name: provider.name, error });
     }
+  }
+  return { results, errors, configuredCount: providers.length };
+}
 
-    try {
-      const bailian = await transcribeWithBailian(audioPath);
-      if (bailian) cloudResults.push(bailian);
-    } catch (error) {
-      cloudErrors.push(`百炼：${error.message}`);
-      console.error(`[百炼识别失败] ${error.message}`);
-    }
-
-    if (cloudResults.length > 0) {
-      const primary = cloudResults[0];
-      return {
-        ...resultFields(
-          primary.text,
-          cloudResults.map((item) => item.source).join("；"),
-          cloudResults.length < 2,
-        ),
-        // 仅供本次进程进行证据校对；mapRecord 不会把它写入飞书。
-        __asrCandidates: cloudResults.map((item) => ({
-          text: cleanTranscript(item.text),
-          source: item.source,
-        })),
-        __sourceVideoUrl: sourceVideoUrl,
-      };
-    }
-
-    const hasCloudCredential = Boolean(
-      process.env.DASHSCOPE_API_KEY ||
-        process.env.BAILIAN_API_KEY ||
-        process.env.VOLCENGINE_SPEECH_API_KEY ||
-        (process.env.VOLCENGINE_SPEECH_APP_KEY &&
-          process.env.VOLCENGINE_SPEECH_ACCESS_KEY),
-    );
-    if (hasCloudCredential) {
-      throw new Error(`云端语音识别均失败：${cloudErrors.join("；")}`);
-    }
-
-    const { stdout } = await run(
-      process.env.WHISPER_PYTHON || resolve(".venv/bin/python"),
-      [
-        resolve("src/transcribe_local.py"),
-        audioPath,
-        "--model",
-        model || process.env.WHISPER_MODEL || "base",
-        ...(prompt ? ["--prompt", prompt.slice(0, 500)] : []),
-      ],
-      { captureStdout: true },
-    );
-    const lines = stdout.trim().split("\n").filter(Boolean);
-    const result = JSON.parse(lines.at(-1) || "{}");
-    if (!result.text) throw new Error("视频中未识别到有效语音");
+export async function transcribeAudio(audioPath, { model, prompt = "" } = {}) {
+  const { results: cloudResults, errors, configuredCount } =
+    await collectCloudTranscripts(audioPath);
+  for (const failure of errors) {
+    console.error(`[${failure.name} 识别失败] ${failure.error.message}`);
+  }
+  if (cloudResults.length > 0) {
+    const primary = cloudResults[0];
     return {
-      ...resultFields(result.text, `本机 Whisper ${result.model}`, true),
-      __sourceVideoUrl: sourceVideoUrl,
+      ...resultFields(
+        primary.text,
+        cloudResults.map((item) => item.source).join("；"),
+        cloudResults.length < 2,
+      ),
+      // 仅供本次进程进行证据校对；mapRecord 不会把它写入飞书。
+      __asrCandidates: cloudResults.map((item) => ({
+        text: cleanTranscript(item.text),
+        source: item.source,
+      })),
+    };
+  }
+
+  if (configuredCount > 0) {
+    throw new CollectorError(
+      `云端语音识别均失败：${errors.map(({ name, error }) => `${name}：${error.message}`).join("；")}`,
+      {
+        code: "cloud_asr_failed",
+        retryable: errors.every(({ error }) => error?.retryable !== false),
+      },
+    );
+  }
+
+  const { stdout } = await run(
+    process.env.WHISPER_PYTHON || resolve(".venv/bin/python"),
+    [
+      resolve("src/ai/transcribe_local.py"),
+      audioPath,
+      "--model",
+      model || process.env.WHISPER_MODEL || "base",
+      ...(prompt ? ["--prompt", prompt.slice(0, 500)] : []),
+    ],
+    { captureStdout: true },
+  );
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  const result = JSON.parse(lines.at(-1) || "{}");
+  if (!result.text) throw new Error("视频中未识别到有效语音");
+  return resultFields(result.text, `本机 Whisper ${result.model}`, true);
+}
+
+export async function transcribeVideo(videoUrls, { model, prompt = "" } = {}) {
+  const prepared = await prepareMedia(videoUrls, {
+    needAudio: true,
+    needVideo: false,
+  });
+  try {
+    return {
+      ...(await transcribeAudio(prepared.audioPath, { model, prompt })),
+      __sourceVideoUrl: prepared.sourceUrl,
     };
   } finally {
-    await rm(workDir, { recursive: true, force: true });
+    await prepared.cleanup();
   }
 }
 
@@ -157,7 +174,7 @@ async function uploadToBailian(audioPath, apiKey, modelName) {
   const policyUrl = new URL(`${uploadBaseUrl}/uploads`);
   policyUrl.searchParams.set("action", "getPolicy");
   policyUrl.searchParams.set("model", modelName);
-  const policyResponse = await fetch(policyUrl, {
+  const policyResponse = await aiHttpRequest(policyUrl, {
     headers: {
       authorization: `Bearer ${apiKey}`,
       "content-type": "application/json",
@@ -171,7 +188,9 @@ async function uploadToBailian(audioPath, apiKey, modelName) {
     );
   }
 
-  const fileName = `douyin-${crypto.randomUUID()}.wav`;
+  const extension = extname(audioPath).slice(1).toLowerCase() || "mp3";
+  const mimeType = extension === "wav" ? "audio/wav" : `audio/${extension}`;
+  const fileName = `douyin-${crypto.randomUUID()}.${extension}`;
   const objectKey = `${policy.upload_dir}/${fileName}`;
   const form = new FormData();
   form.append("OSSAccessKeyId", policy.oss_access_key_id);
@@ -182,8 +201,8 @@ async function uploadToBailian(audioPath, apiKey, modelName) {
   form.append("key", objectKey);
   form.append("success_action_status", "200");
   const audio = await readFile(audioPath);
-  form.append("file", new Blob([audio], { type: "audio/wav" }), fileName);
-  const uploadResponse = await fetch(policy.upload_host, {
+  form.append("file", new Blob([audio], { type: mimeType }), fileName);
+  const uploadResponse = await aiHttpRequest(policy.upload_host, {
     method: "POST",
     body: form,
   });
@@ -211,7 +230,7 @@ async function transcribeWithBailian(audioPath) {
       ? { vocabulary_id: process.env.BAILIAN_VOCABULARY_ID }
       : {}),
   };
-  const submitResponse = await fetch(`${baseUrl}/services/audio/asr/transcription`, {
+  const submitResponse = await aiHttpRequest(`${baseUrl}/services/audio/asr/transcription`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${apiKey}`,
@@ -236,7 +255,7 @@ async function transcribeWithBailian(audioPath) {
   const deadline = Date.now() + 3 * 60 * 1000;
   while (Date.now() < deadline) {
     await delay(2000);
-    const queryResponse = await fetch(`${baseUrl}/tasks/${taskId}`, {
+    const queryResponse = await aiHttpRequest(`${baseUrl}/tasks/${taskId}`, {
       headers: { authorization: `Bearer ${apiKey}` },
     });
     const task = await queryResponse.json().catch(() => ({}));
@@ -258,7 +277,7 @@ async function transcribeWithBailian(audioPath) {
       (item) => item.subtask_status === "SUCCEEDED" && item.transcription_url,
     );
     if (!resultItem) throw new Error("百炼任务完成但没有可下载的识别结果");
-    const transcriptionResponse = await fetch(resultItem.transcription_url);
+    const transcriptionResponse = await aiHttpRequest(resultItem.transcription_url);
     const transcription = await transcriptionResponse.json().catch(() => ({}));
     const text = cleanTranscript((transcription.transcripts || [])
       .map((item) => item.text || item.transcript || "")
@@ -315,7 +334,7 @@ export async function transcribeWithVolcengine(audioPath) {
       : { "X-Api-App-Key": appKey, "X-Api-Access-Key": accessKey }),
   };
   const audio = await readFile(audioPath);
-  const response = await fetch(VOLCENGINE_FLASH_URL, {
+  const response = await aiHttpRequest(VOLCENGINE_FLASH_URL, {
     method: "POST",
     headers,
     body: JSON.stringify({

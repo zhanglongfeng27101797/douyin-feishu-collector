@@ -1,0 +1,46 @@
+import { HOOK_TYPES } from "../ai/analysis.mjs";
+import { JOB_FIELD_DEFINITIONS } from "../pipeline/job-state.mjs";
+
+export const INPUT_FIELD_NAME = "抖音分享内容（粘贴这里）";
+
+export const COLLECTION_FIELD_DEFINITIONS = Object.freeze([
+  { field_name: INPUT_FIELD_NAME, type: 1 },
+  { field_name: "采集状态", type: 1 },
+  { field_name: "标题", type: 1 },
+  { field_name: "正文", type: 1 },
+  { field_name: "话题标签", type: 1 },
+  { field_name: "博主", type: 1 },
+  { field_name: "抖音号", type: 1 },
+  { field_name: "作品ID", type: 1 },
+  { field_name: "原始链接", type: 15 },
+  { field_name: "标准链接", type: 15 },
+  { field_name: "博主主页", type: 15 },
+  { field_name: "封面链接", type: 15 },
+  { field_name: "视频链接", type: 15 },
+  { field_name: "点赞数", type: 2 },
+  { field_name: "收藏数", type: 2 },
+  { field_name: "评论数", type: 2 },
+  { field_name: "分享数", type: 2 },
+  { field_name: "时长秒", type: 2 },
+  { field_name: "发布时间", type: 5 },
+  { field_name: "采集时间", type: 5 },
+  { field_name: "分辨率", type: 1 },
+  { field_name: "错误原因", type: 1 },
+  { field_name: "封面", type: 17 },
+  { field_name: "视频附件", type: 17 },
+  { field_name: "视频逐字稿", type: 1 },
+  { field_name: "逐字稿字数", type: 2 },
+  { field_name: "转写状态", type: 1 },
+  { field_name: "转写时间", type: 5 },
+  { field_name: "转写来源", type: 1 },
+  { field_name: "转写错误原因", type: 1 },
+  { field_name: "开头钩子", type: 1 },
+  {
+    field_name: "钩子类型",
+    type: 4,
+    property: { options: HOOK_TYPES.map((name) => ({ name })) },
+  },
+  { field_name: "主题", type: 1 },
+  { field_name: "核心知识点", type: 1 },
+  ...JOB_FIELD_DEFINITIONS,
+]);

@@ -8,7 +8,7 @@ async function filesUnder(directory) {
   for (const entry of entries) {
     const target = path.join(directory, entry.name);
     if (entry.isDirectory()) files.push(...(await filesUnder(target)));
-    if (entry.isFile() && target.endsWith(".mjs")) files.push(target);
+    if (entry.isFile() && /\.(?:mjs|js)$/.test(target)) files.push(target);
   }
   return files;
 }

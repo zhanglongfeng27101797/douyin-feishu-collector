@@ -1,8 +1,9 @@
 import { updateRecord } from "../feishu/client.mjs";
 import { fieldsSubset, getLinkValue, mapRecord } from "../feishu/fields.mjs";
-import { proofreadTranscript } from "../review-transcript.mjs";
-import { transcribeVideo } from "../transcribe-media.mjs";
+import { proofreadTranscript } from "../ai/review.mjs";
+import { transcribeAudio, transcribeVideo } from "../ai/transcription.mjs";
 import { getVideoCandidates } from "../media/candidates.mjs";
+import { isTextProofreadEnabled } from "../config/env.mjs";
 
 function hashtags(row) {
   return Array.isArray(row["话题标签"])
@@ -32,8 +33,18 @@ function transcriptionPrompt(row) {
     .slice(0, 500);
 }
 
-export async function transcribeMissing({ context, item, row }) {
-  if (row["视频逐字稿"]) return { row, failed: false };
+export function hasSuccessfulProofread(source) {
+  return String(source || "")
+    .split("；")
+    .some(
+      (sourceName) =>
+        sourceName.startsWith("通义双模型校对 ") ||
+        sourceName.startsWith("证据校对 "),
+    );
+}
+
+export async function transcribeMissing({ context, item, row, preparedMedia = null }) {
+  if (row["视频逐字稿"]) return { row, error: null };
   const { token, appToken, table, fields, fieldNames } = context;
 
   await updateRecord(
@@ -44,9 +55,13 @@ export async function transcribeMissing({ context, item, row }) {
     fieldsSubset({ "转写状态": "转写中", "转写错误原因": "" }, fieldNames),
   );
   try {
-    const transcript = await transcribeVideo(getVideoCandidates(row), {
-      prompt: transcriptionPrompt(row),
-    });
+    const prompt = transcriptionPrompt(row);
+    const transcript = preparedMedia?.audioPath
+      ? {
+          ...(await transcribeAudio(preparedMedia.audioPath, { prompt })),
+          __sourceVideoUrl: preparedMedia.sourceUrl,
+        }
+      : await transcribeVideo(getVideoCandidates(row), { prompt });
     const candidates = Array.isArray(transcript.__asrCandidates)
       ? transcript.__asrCandidates
       : [];
@@ -55,7 +70,7 @@ export async function transcribeMissing({ context, item, row }) {
     delete transcript.__sourceVideoUrl;
     if (sourceVideoUrl) transcript["视频链接"] = sourceVideoUrl;
 
-    if (candidates.length >= 2 || process.env.ENABLE_TEXT_PROOFREAD === "true") {
+    if (candidates.length >= 2 || isTextProofreadEnabled()) {
       try {
         const proofread = await proofreadTranscript(transcript["视频逐字稿"], {
           ...proofreadContext(row, candidates[1]?.text || ""),
@@ -83,7 +98,7 @@ export async function transcribeMissing({ context, item, row }) {
     );
     const updated = { ...row, ...transcript, "采集状态": "成功" };
     console.log(`[成功] ${updated["作品ID"]} 已生成逐字稿`);
-    return { row: updated, failed: false };
+    return { row: updated, error: null };
   } catch (error) {
     await updateRecord(
       token,
@@ -100,18 +115,17 @@ export async function transcribeMissing({ context, item, row }) {
       ),
     );
     console.error(`[转写失败] ${row["作品ID"]}: ${error.message}`);
-    return { row, failed: true };
+    return { row, error };
   }
 }
 
 export async function proofreadExisting({ context, item, row }) {
   if (
-    process.env.ENABLE_TEXT_PROOFREAD !== "true" ||
+    !isTextProofreadEnabled() ||
     !row["视频逐字稿"] ||
-    String(row["转写来源"] || "").includes("通义双模型校对") ||
-    String(row["转写来源"] || "").includes("证据校对")
+    hasSuccessfulProofread(row["转写来源"])
   ) {
-    return row;
+    return { row, error: null };
   }
 
   const { token, appToken, table, fields } = context;
@@ -141,13 +155,9 @@ export async function proofreadExisting({ context, item, row }) {
     console.log(
       `[双模型校对完成] ${row["作品ID"]}: 自动修正 ${proofread.changes.length} 处，待复核 ${proofread.unresolved.length} 处`,
     );
-    return { ...row, ...updates };
+    return { row: { ...row, ...updates }, error: null };
   } catch (error) {
     const updates = {
-      "转写来源": `${String(row["转写来源"] || "")}；通义双模型校对失败`.replace(
-        /^；/,
-        "",
-      ),
       "转写错误原因": error.message,
     };
     await updateRecord(
@@ -158,6 +168,6 @@ export async function proofreadExisting({ context, item, row }) {
       mapRecord(updates, fields),
     );
     console.error(`[双模型校对失败且保留原文] ${error.message}`);
-    return { ...row, ...updates };
+    return { row: { ...row, ...updates }, error };
   }
 }

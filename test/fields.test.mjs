@@ -62,6 +62,21 @@ test("只保留目标表真实存在的字段", () => {
   assert.deepEqual(fieldsSubset({ A: 1, B: 2 }, ["B"]), { B: 2 });
 });
 
+test("状态更新可以显式清空已有字段", () => {
+  const fields = [
+    { field_name: "错误代码", type: 1 },
+    { field_name: "下次重试时间", type: 5 },
+  ];
+  assert.deepEqual(
+    mapRecord(
+      { "错误代码": "", "下次重试时间": null },
+      fields,
+      { includeEmpty: true },
+    ),
+    { "错误代码": "", "下次重试时间": null },
+  );
+});
+
 test("兼容数组、JSON文本和主视频链接的候选地址", () => {
   assert.deepEqual(
     getVideoCandidates({

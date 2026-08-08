@@ -1,4 +1,6 @@
 import { fileURLToPath } from "node:url";
+import { CollectorError } from "./core/errors.mjs";
+import { httpRequest } from "./core/http.mjs";
 import { uniqueHttpUrls } from "./media/candidates.mjs";
 
 const MOBILE_UA =
@@ -20,7 +22,10 @@ export function extractDouyinUrl(input) {
       // 继续检查下一段候选文本。
     }
   }
-  throw new Error("分享内容中未找到有效的抖音链接");
+  throw new CollectorError("分享内容中未找到有效的抖音链接", {
+    code: "invalid_douyin_source",
+    retryable: false,
+  });
 }
 
 async function resolveAwemeId(sourceUrl) {
@@ -30,7 +35,7 @@ async function resolveAwemeId(sourceUrl) {
     const idMatch = current.match(/\/(?:video|share\/video)\/(\d{10,})/);
     if (idMatch) return { awemeId: idMatch[1], resolvedUrl: current };
 
-    const response = await fetch(current, {
+    const response = await httpRequest(current, {
       redirect: "manual",
       headers: { "user-agent": MOBILE_UA },
     });
@@ -39,7 +44,10 @@ async function resolveAwemeId(sourceUrl) {
     current = new URL(location, current).toString();
   }
 
-  throw new Error("无法从短链接解析作品ID");
+  throw new CollectorError("无法从短链接解析作品ID", {
+    code: "unresolvable_aweme_id",
+    retryable: false,
+  });
 }
 
 function findAwemeDetail(value, awemeId) {
@@ -113,7 +121,7 @@ export function collectCoverCandidates(video = {}) {
 
 async function fetchAwemeDetail(awemeId) {
   const shareUrl = `https://www.iesdouyin.com/share/video/${awemeId}/?from_ssr=1`;
-  const response = await fetch(shareUrl, {
+  const response = await httpRequest(shareUrl, {
     headers: { "user-agent": MOBILE_UA },
   });
   if (!response.ok) {

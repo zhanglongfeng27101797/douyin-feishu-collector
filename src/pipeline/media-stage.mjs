@@ -1,12 +1,17 @@
 import { parseDouyinShare } from "../parse-douyin.mjs";
 import {
   downloadAndUploadCover,
-  downloadAndUploadVideo,
-  isRefreshableMediaError,
-} from "../feishu-media.mjs";
+  uploadPreparedVideo,
+} from "../feishu/media.mjs";
+import { getMediaSettings } from "../config/env.mjs";
 import { updateRecord } from "../feishu/client.mjs";
 import { fieldsSubset, getLinkValue, mapRecord } from "../feishu/fields.mjs";
 import { getCoverCandidates, getVideoCandidates } from "../media/candidates.mjs";
+import { prepareMedia } from "../media/ffmpeg.mjs";
+
+export function isFeishuVideoArchiveEnabled() {
+  return getMediaSettings().videoStorageMode !== "none";
+}
 
 export async function uploadCover({ context, item, row }) {
   const { token, appToken, table, fields, fieldNames } = context;
@@ -14,10 +19,9 @@ export async function uploadCover({ context, item, row }) {
     !fieldNames.includes("封面") ||
     !row["作品ID"] ||
     !getLinkValue(row["封面链接"]) ||
-    row["封面"] ||
-    String(row["错误原因"] || "").includes("封面上传失败")
+    row["封面"]
   ) {
-    return row;
+    return { row, error: null };
   }
 
   try {
@@ -36,7 +40,7 @@ export async function uploadCover({ context, item, row }) {
       mapRecord({ "封面": cover }, fields),
     );
     console.log(`[封面成功] ${row["作品ID"]}`);
-    return { ...row, "封面": cover };
+    return { row: { ...row, "封面": cover }, error: null };
   } catch (error) {
     const message = `封面上传失败：${error.message}`;
     await updateRecord(
@@ -47,60 +51,70 @@ export async function uploadCover({ context, item, row }) {
       fieldsSubset({ "错误原因": message }, fieldNames),
     ).catch(() => {});
     console.error(`[封面失败] ${row["作品ID"]}: ${error.message}`);
-    return { ...row, "错误原因": message };
+    return { row: { ...row, "错误原因": message }, error };
   }
 }
 
-export async function uploadVideo({ context, item, row, source }) {
-  const { token, appToken, table, fields, fieldNames } = context;
-  const previousError = String(row["错误原因"] || "");
-  if (
-    !fieldNames.includes("视频附件") ||
-    !row["作品ID"] ||
-    !getLinkValue(row["视频链接"]) ||
-    row["视频附件"] ||
-    (previousError.includes("视频附件上传失败") && !previousError.includes("HTTP 403"))
-  ) {
-    return row;
-  }
+export async function prepareRecordMedia({ context, item, row, source }) {
+  const { videoStorageMode, archiveMaxWidth, archiveCrf } = getMediaSettings();
+  const videoOptions = { maxWidth: archiveMaxWidth, crf: archiveCrf };
+  const needAudio = !row["视频逐字稿"];
+  const needVideo =
+    videoStorageMode !== "none" &&
+    context.fieldNames.includes("视频附件") &&
+    !row["视频附件"];
+  if (!needAudio && !needVideo) return { prepared: null, row };
 
   let current = row;
   try {
-    console.log(`[视频附件] ${current["作品ID"]} 正在上传原视频`);
-    let uploaded;
-    try {
-      uploaded = await downloadAndUploadVideo(getVideoCandidates(current), {
-        token,
-        appToken,
-        awemeId: current["作品ID"],
-      });
-    } catch (downloadError) {
-      const refreshSource = source || getLinkValue(current["标准链接"]);
-      if (!isRefreshableMediaError(downloadError) || !refreshSource) {
-        throw downloadError;
-      }
-      console.log(`[视频附件] ${current["作品ID"]} 播放地址已过期，正在重新解析`);
-      const refreshed = await parseDouyinShare(refreshSource);
-      current = { ...current, ...refreshed };
-      await updateRecord(
-        token,
-        appToken,
-        table.table_id,
-        item.record_id,
-        mapRecord(refreshed, fields),
-      );
-      uploaded = await downloadAndUploadVideo(getVideoCandidates(refreshed), {
-        token,
-        appToken,
-        awemeId: current["作品ID"],
-      });
-    }
+    const prepared = await prepareMedia(getVideoCandidates(current), {
+      needAudio,
+      needVideo,
+      videoProfile:
+        videoStorageMode === "feishu_compressed" ? "compressed" : "original",
+      videoOptions,
+    });
+    return { prepared, row: current };
+  } catch (error) {
+    const refreshSource = source || getLinkValue(current["标准链接"]);
+    if (error?.retryable === false || !refreshSource) throw error;
+    console.log(`[媒体] ${current["作品ID"]} 播放地址不可用，正在重新解析`);
+    const refreshed = await parseDouyinShare(refreshSource);
+    current = { ...current, ...refreshed };
+    await updateRecord(
+      context.token,
+      context.appToken,
+      context.table.table_id,
+      item.record_id,
+      mapRecord(refreshed, context.fields),
+    );
+    const prepared = await prepareMedia(getVideoCandidates(refreshed), {
+      needAudio,
+      needVideo,
+      videoProfile:
+        videoStorageMode === "feishu_compressed" ? "compressed" : "original",
+      videoOptions,
+    });
+    return { prepared, row: current };
+  }
+}
 
-    const attachment = [{ file_token: uploaded.fileToken }];
+export async function archivePreparedVideo({ context, item, row, prepared }) {
+  if (!prepared?.videoPath || row["视频附件"]) {
+    return { row, error: null };
+  }
+  const { token, appToken, table, fields } = context;
+  try {
+    console.log(`[视频归档] ${row["作品ID"]} 正在上传飞书附件`);
+    const uploaded = await uploadPreparedVideo(prepared.videoPath, {
+      token,
+      appToken,
+      awemeId: row["作品ID"],
+      sourceUrl: prepared.sourceUrl,
+    });
     const updates = {
-      "视频附件": attachment,
-      "视频链接": uploaded.usedUrl || current["视频链接"],
-      "错误原因": "",
+      "视频附件": [{ file_token: uploaded.fileToken }],
+      "视频链接": uploaded.usedUrl || row["视频链接"],
     };
     await updateRecord(
       token,
@@ -110,19 +124,11 @@ export async function uploadVideo({ context, item, row, source }) {
       mapRecord(updates, fields),
     );
     console.log(
-      `[视频附件成功] ${current["作品ID"]} ${(uploaded.size / 1024 / 1024).toFixed(1)} MB`,
+      `[视频归档成功] ${row["作品ID"]} ${(uploaded.size / 1024 / 1024).toFixed(1)} MB`,
     );
-    return { ...current, ...updates };
+    return { row: { ...row, ...updates }, error: null };
   } catch (error) {
-    const message = `视频附件上传失败：${error.message}`;
-    await updateRecord(
-      token,
-      appToken,
-      table.table_id,
-      item.record_id,
-      fieldsSubset({ "错误原因": message }, fieldNames),
-    ).catch(() => {});
-    console.error(`[视频附件失败] ${current["作品ID"]}: ${error.message}`);
-    return { ...current, "错误原因": message };
+    console.error(`[视频归档失败] ${row["作品ID"]}: ${error.message}`);
+    return { row, error };
   }
 }

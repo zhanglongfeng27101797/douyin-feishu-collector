@@ -1,0 +1,284 @@
+@media (max-width: 980px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 44px 0 40px;
+  }
+
+  .hero-copy {
+    max-width: 680px;
+  }
+
+  .capture-card {
+    max-width: 760px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .task-panel {
+    position: static;
+    max-height: none;
+  }
+
+  .task-panel,
+  .detail-panel {
+    min-height: auto;
+  }
+
+  .task-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 430px;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    min-height: 64px;
+    padding: 0 14px;
+  }
+
+  main {
+    width: min(100% - 28px, 1320px);
+  }
+
+  .brand small,
+  .settings-toggle span {
+    display: none;
+  }
+
+  .system-pill {
+    width: auto;
+    min-width: 36px;
+    padding: 0 9px;
+    justify-content: center;
+  }
+
+  .system-pill span:last-child {
+    font-size: 9px;
+  }
+
+  .settings-toggle {
+    width: 36px;
+    padding: 0;
+  }
+
+  .settings-toggle::before {
+    content: "⚙";
+    font-size: 14px;
+  }
+
+  .hero {
+    gap: 26px;
+    padding: 32px 0 30px;
+  }
+
+  .hero h1 {
+    font-size: clamp(34px, 10vw, 44px);
+  }
+
+  .hero-description {
+    font-size: 13px;
+  }
+
+  .capture-card {
+    padding: 18px;
+    border-radius: 17px;
+  }
+
+  .capture-heading p {
+    line-height: 1.5;
+  }
+
+  .capture-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .primary-button {
+    width: 100%;
+  }
+
+  .overview {
+    padding: 19px;
+    border-radius: 17px;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+  }
+
+  .overview-actions {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .sync-caption {
+    font-size: 9px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summary-grid article {
+    min-height: 84px;
+  }
+
+  .pipeline {
+    justify-content: start;
+    grid-template-columns: repeat(7, 104px);
+  }
+
+  .task-list,
+  .analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-panel {
+    padding: 19px;
+  }
+
+  .detail-header {
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 15px;
+  }
+
+  .cover-frame {
+    width: 78px;
+    border-radius: 11px;
+  }
+
+  .detail-title h2 {
+    margin-top: 9px;
+    font-size: 19px;
+  }
+
+  .detail-meta span:nth-child(n + 2) {
+    display: none;
+  }
+
+  .analysis-card.is-wide {
+    grid-column: auto;
+  }
+
+  .transcript-toolbar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .transcript-search {
+    grid-column: 1 / -1;
+  }
+
+  .transcript-actions {
+    justify-self: end;
+  }
+
+  .metric-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .metric-row div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .metric-row div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .settings-dialog {
+    inset: 0;
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .settings-form {
+    height: 100dvh;
+  }
+
+  .settings-header,
+  .settings-body,
+  .settings-footer {
+    padding-left: 19px;
+    padding-right: 19px;
+  }
+
+  .settings-header {
+    padding-top: 17px;
+    padding-bottom: 17px;
+  }
+
+  .settings-header h2 {
+    font-size: 20px;
+  }
+
+  .settings-header p:not(.eyebrow) {
+    max-width: 250px;
+    font-size: 10px;
+  }
+
+  .settings-body {
+    padding-top: 18px;
+    padding-bottom: 22px;
+  }
+
+  .storage-note dl {
+    grid-template-columns: 1fr;
+    margin-left: 0;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .settings-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 11px;
+    padding-bottom: 11px;
+  }
+
+  .settings-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    width: min(100%, 390px);
+  }
+
+  .settings-actions .primary-button,
+  .settings-actions .secondary-button {
+    width: 100%;
+    min-height: 40px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+
+  #settings-message {
+    padding-right: 19px;
+    padding-left: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

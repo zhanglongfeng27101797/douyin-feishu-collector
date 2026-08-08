@@ -1,20 +1,18 @@
 import { fileURLToPath } from "node:url";
-import { getFeishuConfig, loadLocalEnv } from "./config/env.mjs";
-import {
-  findTable,
-  listAllRecords,
-  listFields,
-  tenantToken,
-} from "./feishu/client.mjs";
+import { listAllRecords } from "./feishu/client.mjs";
+import { createFeishuContext } from "./feishu/context.mjs";
 import { needsProcessing, processRecord } from "./pipeline/record-pipeline.mjs";
+import { missingJobFields } from "./pipeline/job-state.mjs";
+import {
+  getAsrSettings,
+  getMediaSettings,
+  getWatcherSettings,
+  loadLocalEnv,
+} from "./config/env.mjs";
+import { assertMediaRuntime } from "./media/ffmpeg.mjs";
 
 const DEFAULT_INTERVAL_SECONDS = 10;
 const TOKEN_REFRESH_MS = 60 * 60 * 1000;
-
-function recordConcurrency() {
-  const configured = Number(process.env.FEISHU_RECORD_CONCURRENCY || 2);
-  return Number.isFinite(configured) ? Math.max(1, Math.min(5, Math.floor(configured))) : 2;
-}
 
 async function processWithConcurrency(items, concurrency, worker) {
   let nextIndex = 0;
@@ -32,17 +30,19 @@ async function processWithConcurrency(items, concurrency, worker) {
 
 export async function buildContext() {
   loadLocalEnv();
-  const { appId, appSecret, appToken, tableName } = getFeishuConfig();
-  const token = await tenantToken(appId, appSecret);
-  const table = await findTable(token, appToken, tableName);
-  const fields = await listFields(token, appToken, table.table_id);
-  return {
-    token,
-    appToken,
-    table,
-    fields,
-    fieldNames: fields.map((field) => field.field_name),
-  };
+  await assertMediaRuntime();
+  getMediaSettings();
+  getAsrSettings();
+  const context = await createFeishuContext();
+  const { fieldNames } = context;
+  const missingStateFields = missingJobFields(fieldNames);
+  if (missingStateFields.length > 0) {
+    console.warn(
+      `[配置提醒] 缺少任务状态字段：${missingStateFields.join("、")}。` +
+        "请运行 npm run setup:pipeline；当前进程仅使用内存退避。",
+    );
+  }
+  return context;
 }
 
 export async function runOnce(context, retryAfter = new Map()) {
@@ -63,7 +63,7 @@ export async function runOnce(context, retryAfter = new Map()) {
     return 0;
   }
 
-  const concurrency = recordConcurrency();
+  const { concurrency } = getWatcherSettings();
   console.log(`[监听] 发现 ${pending.length} 条待处理记录，并发数 ${concurrency}`);
   await processWithConcurrency(pending, concurrency, (item) =>
     processRecord({ context, item, existingIds, retryAfter }),

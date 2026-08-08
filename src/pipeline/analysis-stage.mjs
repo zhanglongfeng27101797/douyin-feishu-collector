@@ -1,4 +1,4 @@
-import { analyzeTranscript } from "../analyze-transcript.mjs";
+import { analyzeTranscript } from "../ai/analysis.mjs";
 import { updateRecord } from "../feishu/client.mjs";
 import { mapRecord } from "../feishu/fields.mjs";
 
@@ -16,12 +16,9 @@ export function needsContentAnalysis(row, fieldNames) {
   );
 }
 
-export async function analyzeContent({ context, item, row, retryAfter }) {
-  if (
-    !needsContentAnalysis(row, context.fieldNames) ||
-    Date.now() < (retryAfter.get(item.record_id) || 0)
-  ) {
-    return row;
+export async function analyzeContent({ context, item, row }) {
+  if (!needsContentAnalysis(row, context.fieldNames)) {
+    return { row, error: null };
   }
 
   const { token, appToken, table, fields } = context;
@@ -41,14 +38,12 @@ export async function analyzeContent({ context, item, row, retryAfter }) {
       item.record_id,
       mapRecord(analysisFields, fields),
     );
-    retryAfter.delete(item.record_id);
     console.log(`[内容分析完成] ${row["作品ID"] || item.record_id}，模型 ${model}`);
-    return { ...row, ...analysisFields };
+    return { row: { ...row, ...analysisFields }, error: null };
   } catch (error) {
-    retryAfter.set(item.record_id, Date.now() + 10 * 60 * 1000);
     console.error(
-      `[内容分析失败，10分钟后重试] ${row["作品ID"] || item.record_id}: ${error.message}`,
+      `[内容分析失败] ${row["作品ID"] || item.record_id}: ${error.message}`,
     );
-    return row;
+    return { row, error };
   }
 }
