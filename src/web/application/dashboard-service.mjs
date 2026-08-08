@@ -17,6 +17,7 @@ import {
 const CONTEXT_TTL_MS = 50 * 60 * 1000;
 const DASHBOARD_LIMIT = 30;
 const DASHBOARD_LIST_FIELDS = Object.freeze([
+  INPUT_FIELD_NAME,
   "作品ID",
   "标题",
   "博主",

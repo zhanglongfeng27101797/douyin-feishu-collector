@@ -66,6 +66,9 @@ export function toDashboardRecord(item) {
   const task = taskPresentation(row);
   return {
     id: item.record_id,
+    source:
+      row["抖音分享内容（粘贴）"]?.link ||
+      String(row["抖音分享内容（粘贴）"] || row["原始链接"] || ""),
     awemeId: String(row["作品ID"] || ""),
     title: String(row["标题"] || "等待解析作品信息"),
     author: String(row["博主"] || ""),
