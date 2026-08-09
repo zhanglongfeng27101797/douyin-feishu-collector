@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		02FBBD7D4C21038D01C01593 /* ConfigurationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4261BC221C01715AD5AF096E /* ConfigurationStore.swift */; };
+		097475FDE7D9263EB3FAC244 /* UserServiceConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CF195CD8C691A63CBE86F6B /* UserServiceConfigurationTests.swift */; };
 		0B64527F37A1455DF30357A8 /* DouyinInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D5D588E1B6AA036CF24F07 /* DouyinInput.swift */; };
 		23DABBC494E0B5C8239DD758 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A67C8DF1B7DCAB89293BF1D /* SettingsView.swift */; };
 		3EE9AFF59D3F297FA0F77359 /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAEA8C8C578729525B3E3E2C /* TaskListView.swift */; };
@@ -15,11 +16,13 @@
 		5F05C94256C12A6B03EC9DEF /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DE28DA73B7B86EB6A0530F8 /* TaskDetailView.swift */; };
 		7422C997A135A4AD8F7D6916 /* WorkerConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20B2C22917CA76EB0B4F0FEC /* WorkerConfiguration.swift */; };
 		9A68D0168A51B30FED80A656 /* CollectionJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46CFB6CB9099886506C610EC /* CollectionJob.swift */; };
+		A6A87B9E4AFDE2CEBF595234 /* UserConfigurationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C51222883E5A9877A84744 /* UserConfigurationStore.swift */; };
 		A96A239C15F99741A8219796 /* DouyinInputTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1104393854056AEBA8A760D3 /* DouyinInputTests.swift */; };
 		AA0A23AA73EE87CA0990EFF3 /* SubmitToLiuGuangIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8A062A8966C9D0A3D0CBA27 /* SubmitToLiuGuangIntent.swift */; };
 		C0DD6D99506D5FF9B3D9C32A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B8778BB9945006C8955B2BB3 /* Assets.xcassets */; };
 		C90058BF469978AE1AC35269 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EEAD374691E4DA6981106B9 /* OnboardingView.swift */; };
 		CBA5DD5DFAC38B14F68FA58B /* LiuGuangApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE0F84CFBAE73DC427F2E8A /* LiuGuangApp.swift */; };
+		CDA7976AA4FBCC4358623805 /* UserServiceConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07ADE340F7E28FB9563B6F72 /* UserServiceConfiguration.swift */; };
 		DBE57404CE0DF4891D39FC27 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2729C9927EDD41DBB5FB7A5 /* RootView.swift */; };
 		DC8D63B4A8825511B06037AD /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975B9765DBD40C39A11C7D19 /* AppModel.swift */; };
 		F39E357B6897B170F25F62F3 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F15F08B7F3EE54E23743715 /* KeychainStore.swift */; };
@@ -37,9 +40,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		02C51222883E5A9877A84744 /* UserConfigurationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserConfigurationStore.swift; sourceTree = "<group>"; };
+		07ADE340F7E28FB9563B6F72 /* UserServiceConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserServiceConfiguration.swift; sourceTree = "<group>"; };
 		08D5D588E1B6AA036CF24F07 /* DouyinInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DouyinInput.swift; sourceTree = "<group>"; };
 		1104393854056AEBA8A760D3 /* DouyinInputTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DouyinInputTests.swift; sourceTree = "<group>"; };
 		1A67C8DF1B7DCAB89293BF1D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		1CF195CD8C691A63CBE86F6B /* UserServiceConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserServiceConfigurationTests.swift; sourceTree = "<group>"; };
 		1FE5F63958E53C0F8F04CA47 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		20B2C22917CA76EB0B4F0FEC /* WorkerConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkerConfiguration.swift; sourceTree = "<group>"; };
 		3DE28DA73B7B86EB6A0530F8 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
@@ -83,6 +89,7 @@
 				975B9765DBD40C39A11C7D19 /* AppModel.swift */,
 				4261BC221C01715AD5AF096E /* ConfigurationStore.swift */,
 				5F15F08B7F3EE54E23743715 /* KeychainStore.swift */,
+				02C51222883E5A9877A84744 /* UserConfigurationStore.swift */,
 				92C98C317472B839247E2CEA /* WorkerAPIClient.swift */,
 			);
 			path = Services;
@@ -92,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				1104393854056AEBA8A760D3 /* DouyinInputTests.swift */,
+				1CF195CD8C691A63CBE86F6B /* UserServiceConfigurationTests.swift */,
 			);
 			path = LiuGuangTests;
 			sourceTree = "<group>";
@@ -118,6 +126,7 @@
 			children = (
 				46CFB6CB9099886506C610EC /* CollectionJob.swift */,
 				08D5D588E1B6AA036CF24F07 /* DouyinInput.swift */,
+				07ADE340F7E28FB9563B6F72 /* UserServiceConfiguration.swift */,
 				20B2C22917CA76EB0B4F0FEC /* WorkerConfiguration.swift */,
 			);
 			path = Models;
@@ -296,6 +305,8 @@
 				580D44D4FF87C7891563531B /* SubmitView.swift in Sources */,
 				5F05C94256C12A6B03EC9DEF /* TaskDetailView.swift in Sources */,
 				3EE9AFF59D3F297FA0F77359 /* TaskListView.swift in Sources */,
+				A6A87B9E4AFDE2CEBF595234 /* UserConfigurationStore.swift in Sources */,
+				CDA7976AA4FBCC4358623805 /* UserServiceConfiguration.swift in Sources */,
 				F7FEF958EDF70DA4FEE25FFF /* WorkerAPIClient.swift in Sources */,
 				7422C997A135A4AD8F7D6916 /* WorkerConfiguration.swift in Sources */,
 			);
@@ -306,6 +317,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A96A239C15F99741A8219796 /* DouyinInputTests.swift in Sources */,
+				097475FDE7D9263EB3FAC244 /* UserServiceConfigurationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,6 +349,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.yuka.liuguang;
+				PRODUCT_MODULE_NAME = LiuGuang;
 				PRODUCT_NAME = "流光";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -355,7 +368,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.yuka.liuguang.LiuGuangTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LiuGuang.app/LiuGuang";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/流光.app/流光";
 			};
 			name = Release;
 		};
@@ -428,7 +441,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.yuka.liuguang.LiuGuangTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LiuGuang.app/LiuGuang";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/流光.app/流光";
 			};
 			name = Debug;
 		};
@@ -513,6 +526,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.yuka.liuguang;
+				PRODUCT_MODULE_NAME = LiuGuang;
 				PRODUCT_NAME = "流光";
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";

@@ -1,106 +1,318 @@
 import SwiftUI
+import UIKit
 
 struct OnboardingView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var step = 0
+    @State private var appID = ""
+    @State private var appSecret = ""
     @State private var baseURL = ""
-    @State private var token = ""
-    @State private var isTesting = false
-    @State private var verification: WorkerVerification?
+    @State private var provider: SpeechProvider = .volcengine
+    @State private var speechAPIKey = ""
     @State private var errorMessage: String?
+
+    private let totalSteps = 3
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Image(systemName: "sparkles.rectangle.stack.fill")
-                            .font(.system(size: 46))
-                            .foregroundStyle(Color.accentColor)
-                        Text("连接你的流光节点")
-                            .font(.title.bold())
-                        Text("节点在后台完成下载、转写、分析和飞书写入。提交成功后可以立即退出 App。")
-                            .foregroundStyle(.secondary)
+            ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea()
+                VStack(spacing: 0) {
+                    progressHeader
+                    TabView(selection: $step) {
+                        FeishuStep(appID: $appID, appSecret: $appSecret).tag(0)
+                        BaseStep(baseURL: $baseURL).tag(1)
+                        SpeechStep(provider: $provider, apiKey: $speechAPIKey).tag(2)
                     }
-                    .padding(.vertical, 12)
-                }
-
-                Section {
-                    TextField("https://你的节点域名", text: $baseURL)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                        .autocorrectionDisabled()
-                    SecureField("访问令牌", text: $token)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                } header: {
-                    Text("任务节点")
-                } footer: {
-                    Text("正式使用必须填写 HTTPS 地址。令牌仅保存在本机 Keychain。")
-                }
-
-                if let verification {
-                    Section("配置检查") {
-                        CheckRow(title: "飞书多维表格", passed: verification.feishuConfigured)
-                        CheckRow(title: "语音识别", passed: verification.speechConfigured)
-                        CheckRow(title: "内容分析", passed: verification.analysisConfigured)
-                        if let table = verification.tableName, !table.isEmpty {
-                            LabeledContent("目标数据表", value: table)
-                        }
-                    }
-                }
-
-                if let errorMessage {
-                    Section {
-                        Text(errorMessage).foregroundStyle(.red)
-                    }
-                }
-
-                Section {
-                    Button {
-                        Task { await testAndSave() }
-                    } label: {
-                        HStack {
-                            Spacer()
-                            if isTesting { ProgressView() } else { Text("测试并保存") }
-                            Spacer()
-                        }
-                    }
-                    .disabled(isTesting || baseURL.isEmpty || token.isEmpty)
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .animation(.snappy, value: step)
+                    footer
                 }
             }
-            .navigationTitle("开始使用")
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
-    private func testAndSave() async {
-        isTesting = true
-        defer { isTesting = false }
-        do {
-            let configuration = WorkerConfiguration(baseURL: baseURL)
-            let client = try WorkerAPIClient(configuration: configuration, accessToken: token)
-            let result = try await client.verify()
-            verification = result
-            guard result.isReady else {
-                throw WorkerAPIError.rejected("节点可以连接，但飞书或模型服务尚未配置完整")
+    private var progressHeader: some View {
+        VStack(spacing: 14) {
+            HStack {
+                Label("流光", systemImage: "sparkles")
+                    .font(.headline.bold())
+                    .foregroundStyle(.tint)
+                Spacer()
+                Text("\(step + 1) / \(totalSteps)")
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
             }
-            try model.save(configuration: configuration, token: token)
-            errorMessage = nil
+            ProgressView(value: Double(step + 1), total: Double(totalSteps))
+                .tint(.blue)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 16)
+        .padding(.bottom, 12)
+        .background(.ultraThinMaterial)
+    }
+
+    private var footer: some View {
+        VStack(spacing: 10) {
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+            HStack(spacing: 12) {
+                if step > 0 {
+                    Button("上一步") { step -= 1 }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                }
+                Button {
+                    advance()
+                } label: {
+                    Text(step == totalSteps - 1 ? "保存并进入工作台" : "下一步")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(!currentStepIsValid)
+            }
+        }
+        .padding(20)
+        .background(.ultraThinMaterial)
+    }
+
+    private var currentStepIsValid: Bool {
+        switch step {
+        case 0: !appID.trimmed.isEmpty && !appSecret.trimmed.isEmpty
+        case 1: UserServiceConfiguration.isFeishuBaseURL(baseURL)
+        default: !speechAPIKey.trimmed.isEmpty
+        }
+    }
+
+    private func advance() {
+        errorMessage = nil
+        guard step == totalSteps - 1 else {
+            step += 1
+            return
+        }
+        do {
+            try model.save(userConfiguration: UserServiceConfiguration(
+                feishuAppID: appID,
+                feishuAppSecret: appSecret,
+                feishuBaseURL: baseURL,
+                speechProvider: provider,
+                speechAPIKey: speechAPIKey
+            ))
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 }
 
-private struct CheckRow: View {
-    let title: String
-    let passed: Bool
+private struct FeishuStep: View {
+    @Binding var appID: String
+    @Binding var appSecret: String
 
     var body: some View {
-        HStack {
-            Label(title, systemImage: passed ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-            Spacer()
-            Text(passed ? "已配置" : "待配置")
-                .foregroundStyle(passed ? .green : .orange)
+        SetupPage(
+            eyebrow: "第 1 步 · 飞书应用",
+            title: "连接你自己的飞书",
+            subtitle: "在飞书开放平台创建应用并开通多维表格权限。你的密钥只保存在当前设备。",
+            symbol: "building.2.crop.circle.fill"
+        ) {
+            FieldCard {
+                SetupTextField(title: "App ID", placeholder: "cli_xxxxxxxxx", text: $appID)
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("App Secret · 安全存储", systemImage: "lock.fill")
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                    SecureField("粘贴 App Secret", text: $appSecret)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+            }
+            PrivacyNote(text: "App Secret 会进入 iPhone Keychain，不会显示在界面、日志或上传到开发者服务器。")
         }
     }
+}
+
+private struct BaseStep: View {
+    @Binding var baseURL: String
+
+    var body: some View {
+        SetupPage(
+            eyebrow: "第 2 步 · 飞书表格",
+            title: "选择内容写入位置",
+            subtitle: "打开目标多维表格，复制浏览器地址并粘贴到下面。App 会从链接中读取 Base 信息。",
+            symbol: "tablecells.badge.ellipsis"
+        ) {
+            FieldCard {
+                SetupTextField(
+                    title: "多维表格链接",
+                    placeholder: "https://xxx.feishu.cn/base/...",
+                    text: $baseURL,
+                    keyboard: .URL
+                )
+            }
+            if !baseURL.isEmpty {
+                StatusNote(
+                    passed: UserServiceConfiguration.isFeishuBaseURL(baseURL),
+                    text: UserServiceConfiguration.isFeishuBaseURL(baseURL)
+                        ? "已识别飞书多维表格链接"
+                        : "请粘贴以 https:// 开头的飞书 Base 链接"
+                )
+            }
+        }
+    }
+}
+
+private struct SpeechStep: View {
+    @Binding var provider: SpeechProvider
+    @Binding var apiKey: String
+
+    var body: some View {
+        SetupPage(
+            eyebrow: "第 3 步 · 语音识别",
+            title: "选择逐字稿服务",
+            subtitle: "使用你自己的服务商账号和额度。以后可以随时在设置中更换。",
+            symbol: "waveform.circle.fill"
+        ) {
+            VStack(spacing: 12) {
+                ForEach(SpeechProvider.allCases) { item in
+                    ProviderCard(provider: item, selected: provider == item) {
+                        withAnimation(.snappy) { provider = item }
+                    }
+                }
+            }
+            FieldCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("API Key · 安全存储", systemImage: "lock.fill")
+                        .font(.caption.bold())
+                        .foregroundStyle(.secondary)
+                    SecureField("粘贴 \(provider.title) 的 API Key", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+            }
+            PrivacyNote(text: "只保存配置，不额外发起测试请求，也不会消耗你的模型额度。")
+        }
+    }
+}
+
+private struct SetupPage<Content: View>: View {
+    let eyebrow: String
+    let title: String
+    let subtitle: String
+    let symbol: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                Image(systemName: symbol)
+                    .font(.system(size: 42))
+                    .foregroundStyle(.tint)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(eyebrow).font(.subheadline.bold()).foregroundStyle(.tint)
+                    Text(title).font(.largeTitle.bold())
+                    Text(subtitle).font(.body).foregroundStyle(.secondary)
+                }
+                content
+            }
+            .padding(24)
+            .padding(.bottom, 20)
+        }
+        .scrollDismissesKeyboard(.interactively)
+    }
+}
+
+private struct FieldCard<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) { content }
+            .padding(18)
+            .background(.background, in: RoundedRectangle(cornerRadius: 20))
+            .shadow(color: .black.opacity(0.05), radius: 16, y: 6)
+    }
+}
+
+private struct SetupTextField: View {
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+    var keyboard: UIKeyboardType = .default
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.caption.bold()).foregroundStyle(.secondary)
+            TextField(placeholder, text: $text, axis: .vertical)
+                .keyboardType(keyboard)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        }
+    }
+}
+
+private struct ProviderCard: View {
+    let provider: SpeechProvider
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: provider.symbol)
+                    .font(.title2)
+                    .foregroundStyle(selected ? Color.white : Color.accentColor)
+                    .frame(width: 48, height: 48)
+                    .background(selected ? Color.accentColor : Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(provider.title).font(.headline).foregroundStyle(.primary)
+                    Text(provider.subtitle).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.title2)
+                    .foregroundStyle(selected ? Color.accentColor : Color.secondary.opacity(0.45))
+            }
+            .padding(14)
+            .background(selected ? Color.accentColor.opacity(0.08) : Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(selected ? Color.accentColor : .clear, lineWidth: 2)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct PrivacyNote: View {
+    let text: String
+
+    var body: some View {
+        Label(text, systemImage: "lock.shield.fill")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+    }
+}
+
+private struct StatusNote: View {
+    let passed: Bool
+    let text: String
+
+    var body: some View {
+        Label(text, systemImage: passed ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+            .font(.footnote.bold())
+            .foregroundStyle(passed ? .green : .orange)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background((passed ? Color.green : Color.orange).opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+private extension String {
+    var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
 }

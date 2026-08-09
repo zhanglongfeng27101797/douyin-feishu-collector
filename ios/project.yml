@@ -20,6 +20,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.yuka.liuguang
         PRODUCT_NAME: 流光
+        PRODUCT_MODULE_NAME: LiuGuang
         INFOPLIST_KEY_CFBundleDisplayName: 流光
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
@@ -42,3 +43,16 @@ targets:
       - path: LiuGuangTests
     dependencies:
       - target: LiuGuang
+    settings:
+      base:
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/流光.app/流光"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  LiuGuang:
+    build:
+      targets:
+        LiuGuang: all
+        LiuGuangTests: [test]
+    test:
+      targets:
+        - LiuGuangTests

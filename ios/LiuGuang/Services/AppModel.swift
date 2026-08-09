@@ -7,10 +7,15 @@ final class AppModel: ObservableObject {
     @Published var lastError: String?
 
     private let configurationStore: ConfigurationStore
+    private let userConfigurationStore: UserConfigurationStore
 
-    init(configurationStore: ConfigurationStore = ConfigurationStore()) {
+    init(
+        configurationStore: ConfigurationStore = ConfigurationStore(),
+        userConfigurationStore: UserConfigurationStore = UserConfigurationStore()
+    ) {
         self.configurationStore = configurationStore
-        self.isConfigured = (try? configurationStore.load()) != nil
+        self.userConfigurationStore = userConfigurationStore
+        self.isConfigured = (try? userConfigurationStore.load()) != nil
     }
 
     func client() throws -> WorkerAPIClient {
@@ -28,8 +33,18 @@ final class AppModel: ObservableObject {
         isConfigured = true
     }
 
+    func save(userConfiguration: UserServiceConfiguration) throws {
+        try userConfigurationStore.save(userConfiguration)
+        isConfigured = true
+    }
+
+    func userConfiguration() throws -> UserServiceConfiguration? {
+        try userConfigurationStore.load()
+    }
+
     func disconnect() throws {
         try configurationStore.clear()
+        try userConfigurationStore.clear()
         jobs = []
         isConfigured = false
     }

@@ -7,9 +7,9 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("运行方式") {
-                LabeledContent("处理位置", value: "远程任务节点")
-                Text("App 和快捷指令只提交任务。下载、转写、分析与飞书写入均由你的节点完成。")
+            Section("账号与服务") {
+                LabeledContent("凭证归属", value: "用户自有")
+                Text("飞书和语音服务使用你自己的账号。敏感密钥仅保存在本机 Keychain。")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -29,11 +29,10 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("设置")
-        .confirmationDialog("确定清除任务节点配置？", isPresented: $showDisconnectConfirmation) {
+        .confirmationDialog("确定清除本机服务配置？", isPresented: $showDisconnectConfirmation) {
             Button("清除配置", role: .destructive) {
                 do { try model.disconnect() } catch { errorMessage = error.localizedDescription }
             }
         }
     }
 }
-
