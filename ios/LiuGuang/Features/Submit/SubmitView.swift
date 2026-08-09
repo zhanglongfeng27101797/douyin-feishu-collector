@@ -52,7 +52,7 @@ struct SubmitView: View {
                 } label: {
                     Label {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("保存原视频")
+                            Text("保存无水印视频")
                             Text("解析可用播放流，并保存到系统相册")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -75,6 +75,22 @@ struct SubmitView: View {
                         }
                     } icon: {
                         Image(systemName: "waveform.and.mic")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+
+                NavigationLink {
+                    TeleprompterEditorView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("提词器")
+                            Text("编辑文稿、保存草稿并匀速滚动提词")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "text.rectangle.page")
                             .foregroundStyle(Color.accentColor)
                     }
                 }

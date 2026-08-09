@@ -39,7 +39,7 @@ struct VideoSaveView: View {
                         if isSaving {
                             ProgressView()
                         } else {
-                            Label("保存原视频到相册", systemImage: "square.and.arrow.down")
+                            Label("保存无水印视频到相册", systemImage: "square.and.arrow.down")
                         }
                         Spacer()
                     }
@@ -60,7 +60,7 @@ struct VideoSaveView: View {
                 }
             }
         }
-        .navigationTitle("保存原视频")
+        .navigationTitle("保存无水印视频")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("粘贴") {
