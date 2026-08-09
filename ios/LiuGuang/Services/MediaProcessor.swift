@@ -8,6 +8,21 @@ final class MediaProcessor: Sendable {
         self.session = session
     }
 
+    func downloadVideo(videoURLs: [URL]) async throws -> (url: URL, cleanup: @Sendable () -> Void) {
+        var lastError: Error?
+        for candidate in videoURLs {
+            do {
+                let videoURL = try await download(candidate)
+                return (videoURL, {
+                    try? FileManager.default.removeItem(at: videoURL)
+                })
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError ?? PipelineError.noVideo
+    }
+
     func prepareWAV(videoURLs: [URL]) async throws -> (url: URL, cleanup: @Sendable () -> Void) {
         var lastError: Error?
         for candidate in videoURLs {
@@ -115,4 +130,3 @@ final class MediaProcessor: Sendable {
         return data
     }
 }
-

@@ -35,6 +35,7 @@ targets:
         # CFNetwork builds its default User-Agent from this value and expects
         # a string.  A numeric plist value crashes as soon as URLSession starts.
         CFBundleVersion: "1"
+        NSPhotoLibraryAddUsageDescription: 流光需要把你确认保存的视频添加到系统相册。
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

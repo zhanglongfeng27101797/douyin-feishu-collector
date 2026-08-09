@@ -48,6 +48,22 @@ struct SubmitView: View {
 
             Section("快捷工具") {
                 NavigationLink {
+                    VideoSaveView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("保存原视频")
+                            Text("解析可用播放流，并保存到系统相册")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "square.and.arrow.down")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+
+                NavigationLink {
                     TranscriptExtractionView()
                 } label: {
                     Label {

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -16,6 +16,7 @@
 		2EAF1D036F45D48E5CE72158 /* FeishuClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D40FBA11491D1B7969A7A97 /* FeishuClient.swift */; };
 		3EE9AFF59D3F297FA0F77359 /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAEA8C8C578729525B3E3E2C /* TaskListView.swift */; };
 		42605E4C4E2C410DCFAB1701 /* CollectionRecordDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04F9663545C442BE7839275B /* CollectionRecordDetailView.swift */; };
+		55FAE4F60E91D3942D182252 /* VideoSaveService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B1AD4E3DD1A3C3044340C4D /* VideoSaveService.swift */; };
 		580D44D4FF87C7891563531B /* SubmitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FB94E42001F9E69CFCD31E2 /* SubmitView.swift */; };
 		5F05C94256C12A6B03EC9DEF /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DE28DA73B7B86EB6A0530F8 /* TaskDetailView.swift */; };
 		72222A442882F803DAA98B32 /* DirectCollectionPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ACFE7188FE3B08D54C8B213 /* DirectCollectionPipeline.swift */; };
@@ -36,6 +37,7 @@
 		CDA7976AA4FBCC4358623805 /* UserServiceConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07ADE340F7E28FB9563B6F72 /* UserServiceConfiguration.swift */; };
 		DBE57404CE0DF4891D39FC27 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2729C9927EDD41DBB5FB7A5 /* RootView.swift */; };
 		DC8D63B4A8825511B06037AD /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975B9765DBD40C39A11C7D19 /* AppModel.swift */; };
+		F004E5009A8FCF1F5AA884A9 /* VideoSaveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8D7C76E40E0F5B65F1BAFC /* VideoSaveView.swift */; };
 		F1952C12A7110CF16064D875 /* PipelineError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74DCD9B025A030D053A76739 /* PipelineError.swift */; };
 		F39E357B6897B170F25F62F3 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F15F08B7F3EE54E23743715 /* KeychainStore.swift */; };
 /* End PBXBuildFile section */
@@ -63,6 +65,7 @@
 		1CF195CD8C691A63CBE86F6B /* UserServiceConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserServiceConfigurationTests.swift; sourceTree = "<group>"; };
 		1FE5F63958E53C0F8F04CA47 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		27F12C119B707D6875322A05 /* FeishuCollectionRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeishuCollectionRecord.swift; sourceTree = "<group>"; };
+		3B1AD4E3DD1A3C3044340C4D /* VideoSaveService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSaveService.swift; sourceTree = "<group>"; };
 		3DE28DA73B7B86EB6A0530F8 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		46CFB6CB9099886506C610EC /* CollectionJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionJob.swift; sourceTree = "<group>"; };
 		4BE0F84CFBAE73DC427F2E8A /* LiuGuangApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiuGuangApp.swift; sourceTree = "<group>"; };
@@ -71,7 +74,7 @@
 		5F15F08B7F3EE54E23743715 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		74DCD9B025A030D053A76739 /* PipelineError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineError.swift; sourceTree = "<group>"; };
 		8D40FBA11491D1B7969A7A97 /* FeishuClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeishuClient.swift; sourceTree = "<group>"; };
-		8E2891AE88B3F2B329AFDF29 /* LiuGuang.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LiuGuang.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8E2891AE88B3F2B329AFDF29 /* 流光.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "流光.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		8EEAD374691E4DA6981106B9 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		975B9765DBD40C39A11C7D19 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		9B7CCE38BD871466A1958EEE /* PipelineFoundationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineFoundationTests.swift; sourceTree = "<group>"; };
@@ -85,6 +88,7 @@
 		D8A062A8966C9D0A3D0CBA27 /* SubmitToLiuGuangIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubmitToLiuGuangIntent.swift; sourceTree = "<group>"; };
 		DAEA8C8C578729525B3E3E2C /* TaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListView.swift; sourceTree = "<group>"; };
 		DC8F178E99B9162D90E10C26 /* MediaProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaProcessor.swift; sourceTree = "<group>"; };
+		ED8D7C76E40E0F5B65F1BAFC /* VideoSaveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoSaveView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -117,6 +121,7 @@
 				74DCD9B025A030D053A76739 /* PipelineError.swift */,
 				1B4821294CC9AB7329BBA652 /* TranscriptExtractionPipeline.swift */,
 				02C51222883E5A9877A84744 /* UserConfigurationStore.swift */,
+				3B1AD4E3DD1A3C3044340C4D /* VideoSaveService.swift */,
 				B9B01F98614F8BC995A0D90E /* VolcengineSpeechClient.swift */,
 			);
 			path = Services;
@@ -174,7 +179,7 @@
 		64CC6327908ADBD9F0031869 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				8E2891AE88B3F2B329AFDF29 /* LiuGuang.app */,
+				8E2891AE88B3F2B329AFDF29 /* 流光.app */,
 				580ABE731D08D158A80935B7 /* LiuGuangTests.xctest */,
 			);
 			name = Products;
@@ -236,8 +241,17 @@
 				B705FA2DF0CC85A9A07F5625 /* Submit */,
 				639798ADD2A8C9A7476D1FE6 /* Tasks */,
 				710F35DB9C82BF097FEE5D29 /* Transcript */,
+				D8E3A6298EB78CE9A6654775 /* Video */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		D8E3A6298EB78CE9A6654775 /* Video */ = {
+			isa = PBXGroup;
+			children = (
+				ED8D7C76E40E0F5B65F1BAFC /* VideoSaveView.swift */,
+			);
+			path = Video;
 			sourceTree = "<group>";
 		};
 		DC60B55AF4E19F5546324852 /* Settings */ = {
@@ -266,7 +280,7 @@
 			packageProductDependencies = (
 			);
 			productName = LiuGuang;
-			productReference = 8E2891AE88B3F2B329AFDF29 /* LiuGuang.app */;
+			productReference = 8E2891AE88B3F2B329AFDF29 /* 流光.app */;
 			productType = "com.apple.product-type.application";
 		};
 		E0F109EEF2AA57A47F9A43E1 /* LiuGuangTests */ = {
@@ -297,7 +311,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					9893AEADD10AE0DD859C4CF2 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 					E0F109EEF2AA57A47F9A43E1 = {
@@ -315,7 +328,6 @@
 			);
 			mainGroup = 02479E1B6F9526E413276D87;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -367,6 +379,8 @@
 				0DF18C197AA85371D333EDEE /* TranscriptExtractionView.swift in Sources */,
 				A6A87B9E4AFDE2CEBF595234 /* UserConfigurationStore.swift in Sources */,
 				CDA7976AA4FBCC4358623805 /* UserServiceConfiguration.swift in Sources */,
+				55FAE4F60E91D3942D182252 /* VideoSaveService.swift in Sources */,
+				F004E5009A8FCF1F5AA884A9 /* VideoSaveView.swift in Sources */,
 				B5347DE1E36146BFD89A3BAD /* VolcengineSpeechClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -398,6 +412,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 2QRP62VPDD;
 				INFOPLIST_FILE = LiuGuang/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "流光";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
@@ -577,6 +592,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 2QRP62VPDD;
 				INFOPLIST_FILE = LiuGuang/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "流光";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
