@@ -38,6 +38,8 @@
 4. 在 Xcode 的 Signing & Capabilities 中选择自己的 Apple Developer Team。
 5. 选择 iPhone 模拟器或真机运行。
 
+> 不要使用 `CODE_SIGNING_ALLOWED=NO` 构建后安装到模拟器或真机。未签名的 App 无法访问 Keychain，会出现状态码 `-34018`。在 Xcode 中选择开发团队并直接运行即可。
+
 ## 当前开发边界
 
 第一版先复用现有 Mac 后台的最小闭环：抖音分享文案 → 作品基础数据 → 视频音频 → 火山转写 → 飞书“采集库”。目前真正接通的语音服务是火山引擎；百炼与 OpenRouter 仍保留在配置界面，后续再接适配器。

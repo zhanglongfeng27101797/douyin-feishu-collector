@@ -7,7 +7,11 @@ enum KeychainStoreError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unexpectedStatus(let status):
-            "无法安全保存凭证（Keychain 状态码：\(status)）"
+            if status == errSecMissingEntitlement {
+                "无法访问 Keychain：App 未正确签名。请在 Xcode 的 Signing & Capabilities 中选择开发团队后重新运行。"
+            } else {
+                "无法安全保存凭证（Keychain 状态码：\(status)）"
+            }
         }
     }
 }
@@ -74,4 +78,3 @@ struct KeychainStore: Sendable {
         }
     }
 }
-
