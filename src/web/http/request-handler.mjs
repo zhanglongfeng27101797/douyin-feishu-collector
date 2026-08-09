@@ -5,6 +5,8 @@ export function createRequestHandler({
   service,
   settingsService,
   serveStatic,
+  handleWorkerRoute = async () => false,
+  allowDashboardAPI = true,
   logger = console,
 }) {
   const routes = new Map([
@@ -53,6 +55,11 @@ export function createRequestHandler({
   return async function handleRequest(request, response) {
     const url = new URL(request.url || "/", `http://${request.headers.host || host}`);
     try {
+      if (await handleWorkerRoute(request, response, url)) return;
+      if (!allowDashboardAPI && url.pathname.startsWith("/api/")) {
+        sendJson(response, 403, { ok: false, error: "远程节点不开放管理页面接口" });
+        return;
+      }
       if (request.method === "GET" && url.pathname === "/health") {
         sendJson(response, 200, { ok: true, service: "douyin-feishu-dashboard" });
         return;

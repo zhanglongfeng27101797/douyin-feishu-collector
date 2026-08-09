@@ -6,6 +6,16 @@
 
 适合需要持续整理短视频素材的内容运营、创作者和小团队。项目不是在线 SaaS：密钥保存在本机，业务数据留在飞书，运行期间电脑需要保持开机联网。
 
+## iOS 客户端
+
+仓库已包含“轻量 iOS 客户端 + 用户自有远程任务节点”的 MVP 源码。iOS/快捷指令只负责快速提交任务，下载、转写、分析和飞书写入由持续在线的任务节点完成，因此提交后可以锁屏或退出 App。
+
+- iOS 工程与运行说明：[`ios/README.md`](ios/README.md)
+- iOS 产品和架构需求：[`docs/ios-product-requirements.md`](docs/ios-product-requirements.md)
+- 任务节点接口契约：[`docs/ios-worker-openapi.yaml`](docs/ios-worker-openapi.yaml)
+
+远程节点使用 `WORKER_API_KEY` 保护 `/v1` 接口。每位用户应使用自己的节点、飞书与模型服务凭证；不要共用开发者的 `.env` 文件。
+
 ## 从链接到内容资料
 
 ```mermaid

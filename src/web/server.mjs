@@ -4,8 +4,10 @@ import { fileURLToPath } from "node:url";
 import { loadLocalEnv } from "../config/env.mjs";
 import { createDashboardService } from "./application/dashboard-service.mjs";
 import { createSettingsService } from "./application/settings-service.mjs";
+import { createWorkerApiService } from "./application/worker-api-service.mjs";
 import { createRequestHandler } from "./http/request-handler.mjs";
 import { createStaticFileHandler } from "./http/static-files.mjs";
+import { createWorkerRouteHandler } from "./http/worker-routes.mjs";
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(MODULE_DIR, "public");
@@ -14,6 +16,7 @@ export async function startWebServer({
   port = Number(process.env.WEB_PORT || 3210),
   service = createDashboardService(),
   settingsService = createSettingsService({ onChange: () => service.invalidate?.() }),
+  workerService = createWorkerApiService({ dashboardService: service }),
   logger = console,
 } = {}) {
   if (host !== "127.0.0.1" && host !== "localhost" && process.env.WEB_ALLOW_REMOTE !== "true") {
@@ -21,11 +24,18 @@ export async function startWebServer({
   }
 
   const serveStatic = createStaticFileHandler(PUBLIC_DIR);
+  const allowDashboardAPI = host === "127.0.0.1" || host === "localhost";
+  const handleWorkerRoute = createWorkerRouteHandler({
+    service: workerService,
+    apiKey: process.env.WORKER_API_KEY,
+  });
   const handler = createRequestHandler({
     host,
     service,
     settingsService,
     serveStatic,
+    handleWorkerRoute,
+    allowDashboardAPI,
     logger,
   });
   const server = createServer(handler);

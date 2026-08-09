@@ -1,0 +1,61 @@
+name: LiuGuang
+options:
+  bundleIdPrefix: com.yuka.liuguang
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""
+targets:
+  LiuGuang:
+    type: application
+    platform: iOS
+    sources:
+      - path: LiuGuang
+    resources:
+      - path: LiuGuang/Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yuka.liuguang
+        PRODUCT_NAME: 流光
+        PRODUCT_MODULE_NAME: LiuGuang
+        INFOPLIST_KEY_CFBundleDisplayName: 流光
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: LiuGuang/Info.plist
+      properties:
+        CFBundleDisplayName: 流光
+        CFBundleShortVersionString: 0.1.0
+        # CFNetwork builds its default User-Agent from this value and expects
+        # a string.  A numeric plist value crashes as soon as URLSession starts.
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+  LiuGuangTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: LiuGuangTests
+    dependencies:
+      - target: LiuGuang
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/流光.app/流光"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  LiuGuang:
+    build:
+      targets:
+        LiuGuang: all
+        LiuGuangTests: [test]
+    test:
+      targets:
+        - LiuGuangTests
