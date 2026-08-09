@@ -32,7 +32,9 @@ targets:
       properties:
         CFBundleDisplayName: 流光
         CFBundleShortVersionString: 0.1.0
-        CFBundleVersion: 1
+        # CFNetwork builds its default User-Agent from this value and expects
+        # a string.  A numeric plist value crashes as soon as URLSession starts.
+        CFBundleVersion: "1"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
