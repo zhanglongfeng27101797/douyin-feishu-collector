@@ -9,18 +9,24 @@
 /* Begin PBXBuildFile section */
 		097475FDE7D9263EB3FAC244 /* UserServiceConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CF195CD8C691A63CBE86F6B /* UserServiceConfigurationTests.swift */; };
 		0B64527F37A1455DF30357A8 /* DouyinInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D5D588E1B6AA036CF24F07 /* DouyinInput.swift */; };
+		0DF18C197AA85371D333EDEE /* TranscriptExtractionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE5A48684590F9B64F4E629D /* TranscriptExtractionView.swift */; };
+		13C70953F76DB75B0924CD94 /* CollectionLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A61BED9041640AF737774E24 /* CollectionLibraryView.swift */; };
+		21715DDCA74028A0C8505B74 /* SetupGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 074D39876B906496F8A9AACD /* SetupGuideView.swift */; };
 		23DABBC494E0B5C8239DD758 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A67C8DF1B7DCAB89293BF1D /* SettingsView.swift */; };
 		2EAF1D036F45D48E5CE72158 /* FeishuClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D40FBA11491D1B7969A7A97 /* FeishuClient.swift */; };
 		3EE9AFF59D3F297FA0F77359 /* TaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAEA8C8C578729525B3E3E2C /* TaskListView.swift */; };
+		42605E4C4E2C410DCFAB1701 /* CollectionRecordDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04F9663545C442BE7839275B /* CollectionRecordDetailView.swift */; };
 		580D44D4FF87C7891563531B /* SubmitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FB94E42001F9E69CFCD31E2 /* SubmitView.swift */; };
 		5F05C94256C12A6B03EC9DEF /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DE28DA73B7B86EB6A0530F8 /* TaskDetailView.swift */; };
 		72222A442882F803DAA98B32 /* DirectCollectionPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ACFE7188FE3B08D54C8B213 /* DirectCollectionPipeline.swift */; };
 		7CE27CD887066BC2220C5FC9 /* PipelineFoundationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B7CCE38BD871466A1958EEE /* PipelineFoundationTests.swift */; };
 		88FBB8F623453A65213377E7 /* DouyinMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = D16B37D083585E1FA4081945 /* DouyinMetadata.swift */; };
 		9A68D0168A51B30FED80A656 /* CollectionJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46CFB6CB9099886506C610EC /* CollectionJob.swift */; };
+		9A8CCAC2AEB61ABDE0410BCB /* TranscriptExtractionPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B4821294CC9AB7329BBA652 /* TranscriptExtractionPipeline.swift */; };
 		A6A87B9E4AFDE2CEBF595234 /* UserConfigurationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C51222883E5A9877A84744 /* UserConfigurationStore.swift */; };
 		A96A239C15F99741A8219796 /* DouyinInputTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1104393854056AEBA8A760D3 /* DouyinInputTests.swift */; };
 		AA0A23AA73EE87CA0990EFF3 /* SubmitToLiuGuangIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8A062A8966C9D0A3D0CBA27 /* SubmitToLiuGuangIntent.swift */; };
+		B3BC3164081F2D0B94E9B990 /* FeishuCollectionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F12C119B707D6875322A05 /* FeishuCollectionRecord.swift */; };
 		B5347DE1E36146BFD89A3BAD /* VolcengineSpeechClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9B01F98614F8BC995A0D90E /* VolcengineSpeechClient.swift */; };
 		C0DD6D99506D5FF9B3D9C32A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B8778BB9945006C8955B2BB3 /* Assets.xcassets */; };
 		C200199F7C309DE0C081FA82 /* DouyinClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F307B3E41B1AE41CB0DC0F4 /* DouyinClient.swift */; };
@@ -46,13 +52,17 @@
 
 /* Begin PBXFileReference section */
 		02C51222883E5A9877A84744 /* UserConfigurationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserConfigurationStore.swift; sourceTree = "<group>"; };
+		04F9663545C442BE7839275B /* CollectionRecordDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionRecordDetailView.swift; sourceTree = "<group>"; };
+		074D39876B906496F8A9AACD /* SetupGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideView.swift; sourceTree = "<group>"; };
 		07ADE340F7E28FB9563B6F72 /* UserServiceConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserServiceConfiguration.swift; sourceTree = "<group>"; };
 		08D5D588E1B6AA036CF24F07 /* DouyinInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DouyinInput.swift; sourceTree = "<group>"; };
 		1104393854056AEBA8A760D3 /* DouyinInputTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DouyinInputTests.swift; sourceTree = "<group>"; };
 		1A67C8DF1B7DCAB89293BF1D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		1ACFE7188FE3B08D54C8B213 /* DirectCollectionPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectCollectionPipeline.swift; sourceTree = "<group>"; };
+		1B4821294CC9AB7329BBA652 /* TranscriptExtractionPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptExtractionPipeline.swift; sourceTree = "<group>"; };
 		1CF195CD8C691A63CBE86F6B /* UserServiceConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserServiceConfigurationTests.swift; sourceTree = "<group>"; };
 		1FE5F63958E53C0F8F04CA47 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		27F12C119B707D6875322A05 /* FeishuCollectionRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeishuCollectionRecord.swift; sourceTree = "<group>"; };
 		3DE28DA73B7B86EB6A0530F8 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		46CFB6CB9099886506C610EC /* CollectionJob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionJob.swift; sourceTree = "<group>"; };
 		4BE0F84CFBAE73DC427F2E8A /* LiuGuangApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiuGuangApp.swift; sourceTree = "<group>"; };
@@ -66,6 +76,8 @@
 		975B9765DBD40C39A11C7D19 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		9B7CCE38BD871466A1958EEE /* PipelineFoundationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineFoundationTests.swift; sourceTree = "<group>"; };
 		9F307B3E41B1AE41CB0DC0F4 /* DouyinClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DouyinClient.swift; sourceTree = "<group>"; };
+		A61BED9041640AF737774E24 /* CollectionLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionLibraryView.swift; sourceTree = "<group>"; };
+		AE5A48684590F9B64F4E629D /* TranscriptExtractionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptExtractionView.swift; sourceTree = "<group>"; };
 		B8778BB9945006C8955B2BB3 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B9B01F98614F8BC995A0D90E /* VolcengineSpeechClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolcengineSpeechClient.swift; sourceTree = "<group>"; };
 		D16B37D083585E1FA4081945 /* DouyinMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DouyinMetadata.swift; sourceTree = "<group>"; };
@@ -103,6 +115,7 @@
 				5F15F08B7F3EE54E23743715 /* KeychainStore.swift */,
 				DC8F178E99B9162D90E10C26 /* MediaProcessor.swift */,
 				74DCD9B025A030D053A76739 /* PipelineError.swift */,
+				1B4821294CC9AB7329BBA652 /* TranscriptExtractionPipeline.swift */,
 				02C51222883E5A9877A84744 /* UserConfigurationStore.swift */,
 				B9B01F98614F8BC995A0D90E /* VolcengineSpeechClient.swift */,
 			);
@@ -123,6 +136,7 @@
 			isa = PBXGroup;
 			children = (
 				8EEAD374691E4DA6981106B9 /* OnboardingView.swift */,
+				074D39876B906496F8A9AACD /* SetupGuideView.swift */,
 			);
 			path = Onboarding;
 			sourceTree = "<group>";
@@ -142,6 +156,7 @@
 				46CFB6CB9099886506C610EC /* CollectionJob.swift */,
 				08D5D588E1B6AA036CF24F07 /* DouyinInput.swift */,
 				D16B37D083585E1FA4081945 /* DouyinMetadata.swift */,
+				27F12C119B707D6875322A05 /* FeishuCollectionRecord.swift */,
 				07ADE340F7E28FB9563B6F72 /* UserServiceConfiguration.swift */,
 			);
 			path = Models;
@@ -163,6 +178,23 @@
 				580ABE731D08D158A80935B7 /* LiuGuangTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		710F35DB9C82BF097FEE5D29 /* Transcript */ = {
+			isa = PBXGroup;
+			children = (
+				AE5A48684590F9B64F4E629D /* TranscriptExtractionView.swift */,
+			);
+			path = Transcript;
+			sourceTree = "<group>";
+		};
+		86CF10EABCFDBF94DB96E8AA /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				A61BED9041640AF737774E24 /* CollectionLibraryView.swift */,
+				04F9663545C442BE7839275B /* CollectionRecordDetailView.swift */,
+			);
+			path = Library;
 			sourceTree = "<group>";
 		};
 		974AE69B961799787D6FA541 /* Resources */ = {
@@ -198,10 +230,12 @@
 		C728F386AA0B2BF600CEFC6E /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				86CF10EABCFDBF94DB96E8AA /* Library */,
 				4DEBCDA753F995A8411F36FE /* Onboarding */,
 				DC60B55AF4E19F5546324852 /* Settings */,
 				B705FA2DF0CC85A9A07F5625 /* Submit */,
 				639798ADD2A8C9A7476D1FE6 /* Tasks */,
+				710F35DB9C82BF097FEE5D29 /* Transcript */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -309,11 +343,14 @@
 			files = (
 				DC8D63B4A8825511B06037AD /* AppModel.swift in Sources */,
 				9A68D0168A51B30FED80A656 /* CollectionJob.swift in Sources */,
+				13C70953F76DB75B0924CD94 /* CollectionLibraryView.swift in Sources */,
+				42605E4C4E2C410DCFAB1701 /* CollectionRecordDetailView.swift in Sources */,
 				72222A442882F803DAA98B32 /* DirectCollectionPipeline.swift in Sources */,
 				C200199F7C309DE0C081FA82 /* DouyinClient.swift in Sources */,
 				0B64527F37A1455DF30357A8 /* DouyinInput.swift in Sources */,
 				88FBB8F623453A65213377E7 /* DouyinMetadata.swift in Sources */,
 				2EAF1D036F45D48E5CE72158 /* FeishuClient.swift in Sources */,
+				B3BC3164081F2D0B94E9B990 /* FeishuCollectionRecord.swift in Sources */,
 				F39E357B6897B170F25F62F3 /* KeychainStore.swift in Sources */,
 				CBA5DD5DFAC38B14F68FA58B /* LiuGuangApp.swift in Sources */,
 				CA3BA7FD583524EA7872EA4A /* MediaProcessor.swift in Sources */,
@@ -321,10 +358,13 @@
 				F1952C12A7110CF16064D875 /* PipelineError.swift in Sources */,
 				DBE57404CE0DF4891D39FC27 /* RootView.swift in Sources */,
 				23DABBC494E0B5C8239DD758 /* SettingsView.swift in Sources */,
+				21715DDCA74028A0C8505B74 /* SetupGuideView.swift in Sources */,
 				AA0A23AA73EE87CA0990EFF3 /* SubmitToLiuGuangIntent.swift in Sources */,
 				580D44D4FF87C7891563531B /* SubmitView.swift in Sources */,
 				5F05C94256C12A6B03EC9DEF /* TaskDetailView.swift in Sources */,
 				3EE9AFF59D3F297FA0F77359 /* TaskListView.swift in Sources */,
+				9A8CCAC2AEB61ABDE0410BCB /* TranscriptExtractionPipeline.swift in Sources */,
+				0DF18C197AA85371D333EDEE /* TranscriptExtractionView.swift in Sources */,
 				A6A87B9E4AFDE2CEBF595234 /* UserConfigurationStore.swift in Sources */,
 				CDA7976AA4FBCC4358623805 /* UserServiceConfiguration.swift in Sources */,
 				B5347DE1E36146BFD89A3BAD /* VolcengineSpeechClient.swift in Sources */,

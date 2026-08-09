@@ -46,6 +46,24 @@ struct SubmitView: View {
                 .disabled(isSubmitting || !DouyinInput.isValid(source))
             }
 
+            Section("快捷工具") {
+                NavigationLink {
+                    TranscriptExtractionView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("提取逐字稿")
+                            Text("只转文字，并保存到飞书逐字稿库")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "waveform.and.mic")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+            }
+
             if submittedJob != nil {
                 Section("已开始") {
                     Label("采集任务已创建", systemImage: "checkmark.circle.fill")

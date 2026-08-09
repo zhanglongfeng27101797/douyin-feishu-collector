@@ -20,12 +20,11 @@ private struct MainTabView: View {
         TabView {
             NavigationStack { SubmitView() }
                 .tabItem { Label("采集", systemImage: "paperplane.fill") }
-            NavigationStack { TaskListView() }
-                .tabItem { Label("任务", systemImage: "list.bullet.rectangle") }
+            NavigationStack { CollectionLibraryView() }
+                .tabItem { Label("采集库", systemImage: "rectangle.grid.1x2.fill") }
             NavigationStack { SettingsView() }
                 .tabItem { Label("设置", systemImage: "gearshape.fill") }
         }
         .tint(Color.accentColor)
     }
 }
-

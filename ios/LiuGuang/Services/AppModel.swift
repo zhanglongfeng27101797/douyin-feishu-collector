@@ -4,17 +4,24 @@ import Foundation
 final class AppModel: ObservableObject {
     @Published private(set) var isConfigured = false
     @Published private(set) var jobs: [CollectionJob] = []
+    @Published private(set) var collectionRecords: [FeishuCollectionRecord] = []
+    @Published private(set) var isLoadingCollectionRecords = false
+    @Published private(set) var collectionRecordsUpdatedAt: Date?
+    @Published var collectionRecordsError: String?
     @Published var lastError: String?
 
     private let userConfigurationStore: UserConfigurationStore
     private let pipeline: DirectCollectionPipeline
+    private let feishuClient: FeishuClient
 
     init(
         userConfigurationStore: UserConfigurationStore = UserConfigurationStore(),
-        pipeline: DirectCollectionPipeline = DirectCollectionPipeline()
+        pipeline: DirectCollectionPipeline = DirectCollectionPipeline(),
+        feishuClient: FeishuClient = FeishuClient()
     ) {
         self.userConfigurationStore = userConfigurationStore
         self.pipeline = pipeline
+        self.feishuClient = feishuClient
         self.isConfigured = (try? userConfigurationStore.load()) != nil
     }
 
@@ -30,11 +37,30 @@ final class AppModel: ObservableObject {
     func disconnect() throws {
         try userConfigurationStore.clear()
         jobs = []
+        collectionRecords = []
         isConfigured = false
     }
 
     func refreshJobs() async {
         lastError = nil
+    }
+
+    func refreshCollectionRecords() async {
+        guard !isLoadingCollectionRecords else { return }
+        guard let configuration = try? userConfigurationStore.load() else {
+            collectionRecordsError = "请先完成飞书配置"
+            return
+        }
+        isLoadingCollectionRecords = true
+        defer { isLoadingCollectionRecords = false }
+        do {
+            let context = try await feishuClient.prepare(configuration: configuration)
+            collectionRecords = try await feishuClient.listRecords(context: context)
+            collectionRecordsUpdatedAt = Date()
+            collectionRecordsError = nil
+        } catch {
+            collectionRecordsError = error.localizedDescription
+        }
     }
 
     func submit(_ source: String) async throws -> CollectionJob {
@@ -83,6 +109,7 @@ final class AppModel: ObservableObject {
             }
             updateJob(id: jobID, status: .succeeded, stage: .completed, progress: 100, title: outcome.title, recordID: outcome.recordID)
             lastError = nil
+            await refreshCollectionRecords()
         } catch {
             updateJob(id: jobID, status: .failed, progress: nil, error: error.localizedDescription, canRetry: true)
             lastError = error.localizedDescription

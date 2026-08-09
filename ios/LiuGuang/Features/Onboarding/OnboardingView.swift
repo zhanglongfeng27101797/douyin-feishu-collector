@@ -11,7 +11,7 @@ struct OnboardingView: View {
     @State private var speechAPIKey = ""
     @State private var errorMessage: String?
 
-    private let totalSteps = 3
+    private let totalSteps = 4
 
     var body: some View {
         NavigationStack {
@@ -20,9 +20,10 @@ struct OnboardingView: View {
                 VStack(spacing: 0) {
                     progressHeader
                     TabView(selection: $step) {
-                        FeishuStep(appID: $appID, appSecret: $appSecret).tag(0)
-                        BaseStep(baseURL: $baseURL).tag(1)
-                        SpeechStep(provider: $provider, apiKey: $speechAPIKey).tag(2)
+                        WelcomeStep().tag(0)
+                        FeishuStep(appID: $appID, appSecret: $appSecret).tag(1)
+                        BaseStep(baseURL: $baseURL).tag(2)
+                        SpeechStep(provider: $provider, apiKey: $speechAPIKey).tag(3)
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .animation(.snappy, value: step)
@@ -84,8 +85,9 @@ struct OnboardingView: View {
 
     private var currentStepIsValid: Bool {
         switch step {
-        case 0: !appID.trimmed.isEmpty && !appSecret.trimmed.isEmpty
-        case 1: UserServiceConfiguration.isFeishuBaseURL(baseURL)
+        case 0: true
+        case 1: !appID.trimmed.isEmpty && !appSecret.trimmed.isEmpty
+        case 2: UserServiceConfiguration.isFeishuBaseURL(baseURL)
         default: !speechAPIKey.trimmed.isEmpty
         }
     }
@@ -106,6 +108,32 @@ struct OnboardingView: View {
             ))
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct WelcomeStep: View {
+    var body: some View {
+        SetupPage(
+            eyebrow: "开始配置",
+            title: "先准备好 3 项服务",
+            subtitle: "流光不使用开发者的账号。飞书、表格和语音服务都由你自己创建，数据和费用也归你自己管理。",
+            symbol: "checklist.checked"
+        ) {
+            FieldCard {
+                SetupRequirementRow(number: "1", title: "飞书自建应用", detail: "获取 App ID 和 App Secret")
+                Divider()
+                SetupRequirementRow(number: "2", title: "飞书多维表格", detail: "创建表格并把应用加为协作者")
+                Divider()
+                SetupRequirementRow(number: "3", title: "火山引擎豆包语音", detail: "开通极速版并创建 API Key")
+            }
+            NavigationLink {
+                SetupGuideIndexView()
+            } label: {
+                GuideEntryLabel(title: "先看完整配置说明", subtitle: "约 5–10 分钟，可随时回到当前进度")
+            }
+            .buttonStyle(.plain)
+            PrivacyNote(text: "App Secret 和 API Key 只保存在当前 iPhone 的 Keychain 中。")
         }
     }
 }
@@ -133,6 +161,12 @@ private struct FeishuStep: View {
                         .autocorrectionDisabled()
                 }
             }
+            NavigationLink {
+                SetupGuideView(topic: .feishuApplication)
+            } label: {
+                GuideEntryLabel(title: "App ID 和 Secret 在哪里？", subtitle: "创建应用、开权限、发布应用")
+            }
+            .buttonStyle(.plain)
             PrivacyNote(text: "App Secret 会进入 iPhone Keychain，不会显示在界面、日志或上传到开发者服务器。")
         }
     }
@@ -164,6 +198,12 @@ private struct BaseStep: View {
                         : "请粘贴以 https:// 开头的飞书 Base 链接"
                 )
             }
+            NavigationLink {
+                SetupGuideView(topic: .feishuBase)
+            } label: {
+                GuideEntryLabel(title: "如何准备多维表格？", subtitle: "创建表格、复制链接、添加应用协作者")
+            }
+            .buttonStyle(.plain)
         }
     }
 }
@@ -196,7 +236,33 @@ private struct SpeechStep: View {
                         .autocorrectionDisabled()
                 }
             }
+            NavigationLink {
+                SetupGuideView(topic: .volcengineSpeech)
+            } label: {
+                GuideEntryLabel(title: "如何获取火山 API Key？", subtitle: "开通录音文件识别极速版")
+            }
+            .buttonStyle(.plain)
             PrivacyNote(text: "只保存配置，不额外发起测试请求，也不会消耗你的模型额度。")
+        }
+    }
+}
+
+private struct SetupRequirementRow: View {
+    let number: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Text(number)
+                .font(.headline.monospacedDigit())
+                .foregroundStyle(.white)
+                .frame(width: 34, height: 34)
+                .background(Color.accentColor, in: Circle())
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.headline)
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 }

@@ -57,6 +57,44 @@ final class FeishuClient: Sendable {
         return FeishuTableContext(token: token, appToken: reference.appToken, tableID: tableID, fields: fields)
     }
 
+    func prepareTranscriptLibrary(configuration: UserServiceConfiguration) async throws -> FeishuTableContext {
+        let reference = try FeishuBaseReference(urlString: configuration.feishuBaseURL)
+        let token = try await tenantToken(appID: configuration.feishuAppID, appSecret: configuration.feishuAppSecret)
+        let tables = try await listTables(token: token, appToken: reference.appToken)
+        let tableID: String
+        if let existing = tables.first(where: { ($0["name"] as? String) == "逐字稿库" }),
+           let existingID = existing["table_id"] as? String {
+            tableID = existingID
+        } else {
+            tableID = try await createTranscriptLibrary(token: token, appToken: reference.appToken)
+        }
+        let fields = try await listFields(token: token, appToken: reference.appToken, tableID: tableID)
+        return FeishuTableContext(token: token, appToken: reference.appToken, tableID: tableID, fields: fields)
+    }
+
+    func transcriptRecord(context: FeishuTableContext, awemeID: String) async throws -> (recordID: String, transcript: String)? {
+        var pageToken: String?
+        repeat {
+            var components = URLComponents()
+            components.path = "/bitable/v1/apps/\(context.appToken)/tables/\(context.tableID)/records"
+            var queryItems = [URLQueryItem(name: "page_size", value: "100")]
+            if let pageToken { queryItems.append(URLQueryItem(name: "page_token", value: pageToken)) }
+            components.queryItems = queryItems
+            guard let path = components.string else {
+                throw PipelineError.invalidResponse("飞书逐字稿查询地址无效")
+            }
+            let data = try await api(path: path, token: context.token)
+            for item in data["items"] as? [[String: Any]] ?? [] {
+                guard let fields = item["fields"] as? [String: Any],
+                      scalarText(fields["作品ID"]) == awemeID,
+                      let recordID = item["record_id"] as? String else { continue }
+                return (recordID, scalarText(fields["视频逐字稿"]) ?? "")
+            }
+            pageToken = (data["has_more"] as? Bool) == true ? data["page_token"] as? String : nil
+        } while pageToken != nil
+        return nil
+    }
+
     func createRecord(context: FeishuTableContext, values: [String: Any]) async throws -> String {
         let mapped = map(values: values, fields: context.fields)
         let data = try await api(
@@ -80,6 +118,35 @@ final class FeishuClient: Sendable {
             method: "PUT",
             body: ["fields": mapped]
         )
+    }
+
+    func listRecords(context: FeishuTableContext, maximumCount: Int = 500) async throws -> [FeishuCollectionRecord] {
+        var records: [FeishuCollectionRecord] = []
+        var pageToken: String?
+
+        repeat {
+            var components = URLComponents()
+            components.path = "/bitable/v1/apps/\(context.appToken)/tables/\(context.tableID)/records"
+            var queryItems = [URLQueryItem(name: "page_size", value: "100")]
+            if let pageToken { queryItems.append(URLQueryItem(name: "page_token", value: pageToken)) }
+            components.queryItems = queryItems
+
+            guard let path = components.string else {
+                throw PipelineError.invalidResponse("飞书记录接口地址无效")
+            }
+            let data = try await api(path: path, token: context.token)
+            let items = data["items"] as? [[String: Any]] ?? []
+            records.append(contentsOf: items.compactMap {
+                FeishuRecordDecoder.decode(item: $0, fieldDefinitions: context.fields)
+            })
+
+            let hasMore = (data["has_more"] as? Bool) == true
+            pageToken = hasMore ? data["page_token"] as? String : nil
+        } while pageToken != nil && records.count < maximumCount
+
+        return Array(records.prefix(maximumCount)).sorted {
+            ($0.modifiedAt ?? $0.createdAt ?? .distantPast) > ($1.modifiedAt ?? $1.createdAt ?? .distantPast)
+        }
     }
 
     private func tenantToken(appID: String, appSecret: String) async throws -> String {
@@ -107,6 +174,37 @@ final class FeishuClient: Sendable {
                   let type = ($0["type"] as? NSNumber)?.intValue else { return nil }
             return FeishuField(name: name, type: type)
         }
+    }
+
+    private func createTranscriptLibrary(token: String, appToken: String) async throws -> String {
+        let fields: [[String: Any]] = [
+            ["field_name": "标题", "type": 1],
+            ["field_name": "作品ID", "type": 1],
+            ["field_name": "原始分享内容", "type": 1],
+            ["field_name": "标准链接", "type": 15],
+            ["field_name": "博主", "type": 1],
+            ["field_name": "视频逐字稿", "type": 1],
+            ["field_name": "提取时间", "type": 5],
+            ["field_name": "转写状态", "type": 1],
+            ["field_name": "转写来源", "type": 1],
+            ["field_name": "错误原因", "type": 1]
+        ]
+        let data = try await api(
+            path: "/bitable/v1/apps/\(appToken)/tables",
+            token: token,
+            method: "POST",
+            body: [
+                "table": [
+                    "name": "逐字稿库",
+                    "default_view_name": "全部逐字稿",
+                    "fields": fields
+                ]
+            ]
+        )
+        guard let tableID = data["table_id"] as? String else {
+            throw PipelineError.invalidResponse("逐字稿库已请求创建，但飞书没有返回数据表编号")
+        }
+        return tableID
     }
 
     private func api(path: String, token: String, method: String = "GET", body: [String: Any]? = nil) async throws -> [String: Any] {
@@ -163,5 +261,19 @@ final class FeishuClient: Sendable {
         }
         return result
     }
-}
 
+    private func scalarText(_ value: Any?) -> String? {
+        if let text = value as? String { return text }
+        if let number = value as? NSNumber { return number.stringValue }
+        if let items = value as? [[String: Any]] {
+            return items.compactMap { $0["text"] as? String }.joined()
+        }
+        if let items = value as? [Any] {
+            return items.compactMap { scalarText($0) }.joined(separator: ", ")
+        }
+        if let object = value as? [String: Any] {
+            return object["text"] as? String ?? object["link"] as? String
+        }
+        return nil
+    }
+}
