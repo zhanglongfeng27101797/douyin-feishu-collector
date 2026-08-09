@@ -175,12 +175,12 @@ private struct SpeechStep: View {
     var body: some View {
         SetupPage(
             eyebrow: "第 3 步 · 语音识别",
-            title: "选择逐字稿服务",
-            subtitle: "使用你自己的服务商账号和额度。以后可以随时在设置中更换。",
+            title: "连接火山语音",
+            subtitle: "基础版先接通我们现有后台使用的火山极速转写。其他服务商将在基础链路稳定后增加。",
             symbol: "waveform.circle.fill"
         ) {
             VStack(spacing: 12) {
-                ForEach(SpeechProvider.allCases) { item in
+                ForEach([SpeechProvider.volcengine]) { item in
                     ProviderCard(provider: item, selected: provider == item) {
                         withAnimation(.snappy) { provider = item }
                     }
