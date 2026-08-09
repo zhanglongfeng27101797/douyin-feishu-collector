@@ -3,7 +3,7 @@ import Foundation
 
 struct SubmitToLiuGuangIntent: AppIntent {
     static let title: LocalizedStringResource = "提交到流光"
-    static let description = IntentDescription("把抖音分享内容提交到你的流光任务节点，任务会在后台继续处理。")
+    static let description = IntentDescription("使用你自己的飞书和火山凭证，采集抖音作品并写入多维表格。")
     static let openAppWhenRun = false
 
     @Parameter(title: "抖音分享内容")
@@ -15,17 +15,17 @@ struct SubmitToLiuGuangIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
         guard DouyinInput.isValid(source) else {
-            throw WorkerAPIError.rejected("分享内容中没有识别到抖音链接")
+            throw PipelineError.invalidDouyinSource
         }
-        guard let stored = try ConfigurationStore().load() else {
-            throw WorkerAPIError.rejected("请先打开流光 App 配置任务节点")
+        guard let configuration = try UserConfigurationStore().load() else {
+            throw PipelineError.invalidResponse("请先打开流光 App 完成服务配置")
         }
-        let client = try WorkerAPIClient(
-            configuration: stored.configuration,
-            accessToken: stored.accessToken
+        let outcome = try await DirectCollectionPipeline().run(
+            source: source,
+            configuration: configuration,
+            progress: { _, _, _, _ in }
         )
-        let job = try await client.submit(source: source)
-        return .result(dialog: "已提交到流光，任务编号：\(job.id)。现在可以退出快捷指令。")
+        return .result(dialog: "采集完成：\(outcome.title)。结果已写入飞书。")
     }
 }
 

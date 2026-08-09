@@ -39,19 +39,18 @@ struct SubmitView: View {
                 } label: {
                     HStack {
                         Spacer()
-                        if isSubmitting { ProgressView() } else { Label("提交后台处理", systemImage: "paperplane.fill") }
+                        if isSubmitting { ProgressView() } else { Label("开始采集", systemImage: "paperplane.fill") }
                         Spacer()
                     }
                 }
                 .disabled(isSubmitting || !DouyinInput.isValid(source))
             }
 
-            if let job = submittedJob {
-                Section("已提交") {
-                    Label("任务已进入节点队列", systemImage: "checkmark.circle.fill")
+            if submittedJob != nil {
+                Section("已开始") {
+                    Label("采集任务已创建", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
-                    LabeledContent("任务编号", value: job.id)
-                    Text("现在可以锁屏或退出 App，后台节点会继续处理。")
+                    Text("请暂时保持 App 在前台。完成后，逐字稿会直接写入你的飞书多维表格。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

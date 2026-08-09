@@ -15,7 +15,7 @@ struct SettingsView: View {
             }
             Section("快捷指令") {
                 Label("系统中搜索“提交到流光”", systemImage: "wand.and.stars")
-                Text("可把抖音分享文本传给该动作，提交后无需等待处理完成。")
+                Text("可把抖音分享文本传给该动作，快捷指令会完成解析、转写并写入飞书。长视频处理时请保持快捷指令运行。")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
