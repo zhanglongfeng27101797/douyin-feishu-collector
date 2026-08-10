@@ -6,15 +6,22 @@
 
 适合需要持续整理短视频素材的内容运营、创作者和小团队。项目不是在线 SaaS：密钥保存在本机，业务数据留在飞书，运行期间电脑需要保持开机联网。
 
-## iOS 客户端
+## 手机客户端
 
-仓库已包含“轻量 iOS 客户端 + 用户自有远程任务节点”的 MVP 源码。iOS/快捷指令只负责快速提交任务，下载、转写、分析和飞书写入由持续在线的任务节点完成，因此提交后可以锁屏或退出 App。
+仓库已包含 Android 与 iOS 客户端源码。两端使用相同的产品结构和用户自有服务配置：凭证安全保存在设备本机，解析、下载、转写和飞书归档由 App 直接完成，长视频处理期间需要保持 App 在前台。
+
+### Android
+
+Android 版使用 Kotlin 与 Jetpack Compose，并以 iOS 版为交互基准，包含四步首次配置、抖音分享采集、飞书采集库、无水印视频保存、逐字稿提取、提词器、系统分享入口和安全设置。
+
+- Android 工程与运行说明：[`android/README.md`](android/README.md)
+
+### iOS
+
+仓库已包含用户自带飞书与火山语音凭证的 iOS 客户端。iPhone 直接解析作品、准备音频、完成转写并写入飞书，并提供系统快捷指令入口。
 
 - iOS 工程与运行说明：[`ios/README.md`](ios/README.md)
-- iOS 产品和架构需求：[`docs/ios-product-requirements.md`](docs/ios-product-requirements.md)
-- 任务节点接口契约：[`docs/ios-worker-openapi.yaml`](docs/ios-worker-openapi.yaml)
-
-远程节点使用 `WORKER_API_KEY` 保护 `/v1` 接口。每位用户应使用自己的节点、飞书与模型服务凭证；不要共用开发者的 `.env` 文件。
+- 移动端产品和架构需求：[`docs/ios-product-requirements.md`](docs/ios-product-requirements.md)
 
 ## 从链接到内容资料
 
@@ -111,6 +118,7 @@ npm run watch
 ## 继续了解
 
 - [技术设计与配置参考](docs/technical-design.md)：架构、状态恢复、媒体和模型策略、安全边界、扩展方式
+- [可选 Worker API 契约](docs/worker-openapi.yaml)：供自动化和其他受信客户端调用的任务节点接口
 - [环境变量示例](.env.example)：所有可配置项及推荐默认值
 - [macOS 后台运行模板](deploy/macos)：个人版和企业版 LaunchAgent 示例
 

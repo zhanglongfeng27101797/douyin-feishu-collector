@@ -12,5 +12,7 @@ final class UserServiceConfigurationTests: XCTestCase {
         XCTAssertFalse(UserServiceConfiguration.isFeishuBaseURL("https://example.feishu.cn/docx/abc"))
         XCTAssertFalse(UserServiceConfiguration.isFeishuBaseURL("http://example.feishu.cn/base/abc"))
         XCTAssertFalse(UserServiceConfiguration.isFeishuBaseURL("https://example.com/base/abc"))
+        XCTAssertFalse(UserServiceConfiguration.isFeishuBaseURL("https://evilfeishu.cn/base/abc"))
+        XCTAssertFalse(UserServiceConfiguration.isFeishuBaseURL("https://evillarksuite.com/base/abc"))
     }
 }
