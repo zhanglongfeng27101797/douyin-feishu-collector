@@ -12,6 +12,8 @@ class UserServiceConfigurationTest {
         assertFalse(UserServiceConfiguration.isFeishuBaseUrl("http://example.feishu.cn/base/appToken"))
         assertFalse(UserServiceConfiguration.isFeishuBaseUrl("https://example.feishu.cn/wiki/token"))
         assertFalse(UserServiceConfiguration.isFeishuBaseUrl("https://evil.example/base/token"))
+        assertFalse(UserServiceConfiguration.isFeishuBaseUrl("https://evilfeishu.cn/base/token"))
+        assertFalse(UserServiceConfiguration.isFeishuBaseUrl("https://evillarksuite.com/base/token"))
     }
 
     @Test

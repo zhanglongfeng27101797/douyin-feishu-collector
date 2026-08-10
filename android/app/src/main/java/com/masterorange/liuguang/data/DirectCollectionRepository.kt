@@ -5,8 +5,9 @@ import com.masterorange.liuguang.domain.CollectionJob
 import com.masterorange.liuguang.domain.FeishuCollectionRecord
 import com.masterorange.liuguang.domain.TranscriptResult
 import com.masterorange.liuguang.domain.UserServiceConfiguration
+import kotlinx.coroutines.CancellationException
 
-data class CollectionOutcome(val title: String, val recordId: String)
+data class CollectionOutcome(val title: String)
 data class TranscriptOutcome(val title: String, val author: String?, val transcript: String, val reusedExisting: Boolean)
 
 class DirectCollectionRepository(
@@ -29,24 +30,25 @@ class DirectCollectionRepository(
 
     suspend fun collect(
         source: String,
-        progress: (CollectionJob.Stage, Int, String?, String?) -> Unit,
+        progress: (CollectionJob.Stage, Int, String?) -> Unit,
     ): CollectionOutcome {
         val configuration = requireConfiguration()
-        progress(CollectionJob.Stage.METADATA, 8, null, null)
+        progress(CollectionJob.Stage.METADATA, 8, null)
         val context = feishu.prepare(configuration)
         val metadata = douyin.collect(source)
-        progress(CollectionJob.Stage.ARCHIVE, 28, metadata.title, null)
+        progress(CollectionJob.Stage.ARCHIVE, 28, metadata.title)
         val recordId = feishu.createInitialRecord(context, source, metadata)
         try {
-            progress(CollectionJob.Stage.MEDIA, 42, metadata.title, recordId)
+            progress(CollectionJob.Stage.MEDIA, 42, metadata.title)
             val wav = media.prepareWav(metadata.videoUrls)
-            progress(CollectionJob.Stage.TRANSCRIPT, 67, metadata.title, recordId)
+            progress(CollectionJob.Stage.TRANSCRIPT, 67, metadata.title)
             val transcript = speech.transcribe(wav, configuration.speechApiKey)
-            progress(CollectionJob.Stage.ARCHIVE, 90, metadata.title, recordId)
+            progress(CollectionJob.Stage.ARCHIVE, 90, metadata.title)
             feishu.updateTranscript(context, recordId, transcript)
-            progress(CollectionJob.Stage.COMPLETED, 100, metadata.title, recordId)
-            return CollectionOutcome(metadata.title, recordId)
-        } catch (error: Throwable) {
+            progress(CollectionJob.Stage.COMPLETED, 100, metadata.title)
+            return CollectionOutcome(metadata.title)
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
             runCatching { feishu.markFailed(context, recordId, error.message ?: "采集失败") }
             throw error
         }
@@ -71,7 +73,8 @@ class DirectCollectionRepository(
             feishu.updateTranscriptLibrary(context, recordId, transcript)
             progress("完成", 100)
             return TranscriptOutcome(metadata.title, metadata.author, transcript.text, false)
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
+            if (error is CancellationException) throw error
             runCatching { feishu.markTranscriptFailed(context, recordId, error.message ?: "逐字稿提取失败") }
             throw error
         }

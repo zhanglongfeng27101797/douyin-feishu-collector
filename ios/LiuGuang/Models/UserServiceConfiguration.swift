@@ -58,8 +58,13 @@ struct UserServiceConfiguration: Equatable, Sendable {
         guard let url = URL(string: value.trimmed),
               url.scheme?.lowercased() == "https",
               let host = url.host?.lowercased(),
-              host.hasSuffix("feishu.cn") || host.hasSuffix("larksuite.com") else { return false }
+              Self.matchesDomain(host, domain: "feishu.cn") ||
+                Self.matchesDomain(host, domain: "larksuite.com") else { return false }
         return url.pathComponents.contains("base")
+    }
+
+    private static func matchesDomain(_ host: String, domain: String) -> Bool {
+        host == domain || host.hasSuffix(".\(domain)")
     }
 }
 

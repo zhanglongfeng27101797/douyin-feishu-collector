@@ -30,10 +30,12 @@ data class UserServiceConfiguration(
     companion object {
         fun isFeishuBaseUrl(value: String): Boolean = runCatching {
             val uri = URI(value.trim())
+            val host = uri.host?.lowercase().orEmpty()
             uri.scheme.equals("https", ignoreCase = true) &&
-                (uri.host?.lowercase()?.endsWith("feishu.cn") == true ||
-                    uri.host?.lowercase()?.endsWith("larksuite.com") == true) &&
+                (host.matchesDomain("feishu.cn") || host.matchesDomain("larksuite.com")) &&
                 uri.path.split('/').contains("base")
         }.getOrDefault(false)
+
+        private fun String.matchesDomain(domain: String): Boolean = this == domain || endsWith(".$domain")
     }
 }

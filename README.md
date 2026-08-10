@@ -21,7 +21,7 @@ Android 版使用 Kotlin 与 Jetpack Compose，并以 iOS 版为交互基准，�
 仓库已包含用户自带飞书与火山语音凭证的 iOS 客户端。iPhone 直接解析作品、准备音频、完成转写并写入飞书，并提供系统快捷指令入口。
 
 - iOS 工程与运行说明：[`ios/README.md`](ios/README.md)
-- iOS 产品和架构需求：[`docs/ios-product-requirements.md`](docs/ios-product-requirements.md)
+- 移动端产品和架构需求：[`docs/ios-product-requirements.md`](docs/ios-product-requirements.md)
 
 ## 从链接到内容资料
 
@@ -118,6 +118,7 @@ npm run watch
 ## 继续了解
 
 - [技术设计与配置参考](docs/technical-design.md)：架构、状态恢复、媒体和模型策略、安全边界、扩展方式
+- [可选 Worker API 契约](docs/worker-openapi.yaml)：供自动化和其他受信客户端调用的任务节点接口
 - [环境变量示例](.env.example)：所有可配置项及推荐默认值
 - [macOS 后台运行模板](deploy/macos)：个人版和企业版 LaunchAgent 示例
 

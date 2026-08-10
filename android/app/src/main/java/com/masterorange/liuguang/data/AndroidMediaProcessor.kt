@@ -55,7 +55,7 @@ class AndroidMediaProcessor(private val context: Context) {
                 values.put(MediaStore.Video.Media.IS_PENDING, 0)
                 resolver.update(uri, values, null, null)
             }
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
             resolver.delete(uri, null, null)
             throw error
         }
@@ -131,6 +131,7 @@ class AndroidMediaProcessor(private val context: Context) {
         require(channels > 0 && sourceRate > 0) { "音频参数无效" }
         val shorts = ByteBuffer.wrap(pcm).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
         val frames = shorts.remaining() / channels
+        require(frames > 0) { "视频音轨没有可识别的音频数据" }
         val mono = ShortArray(frames)
         for (frame in 0 until frames) {
             var sum = 0

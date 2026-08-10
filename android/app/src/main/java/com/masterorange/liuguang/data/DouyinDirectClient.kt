@@ -10,6 +10,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.net.URI
 
 class DouyinDirectClient {
     suspend fun collect(input: String): DouyinMetadata {
@@ -89,14 +90,27 @@ class DouyinDirectClient {
     }
 
     companion object {
+        const val MAX_INPUT_LENGTH = 5_000
         private const val MOBILE_USER_AGENT = "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Mobile Safari/537.36"
-        private val SHARE_URL = Regex("https?://[^\\s]+", RegexOption.IGNORE_CASE)
+        private val URL_CANDIDATE = Regex("https?://[^\\s]+", RegexOption.IGNORE_CASE)
         private val AWEME_ID = Regex("/(?:video|share/video)/(\\d{10,})")
         private val ROUTER_DATA = Regex("window\\._ROUTER_DATA\\s*=\\s*(.*?)</script>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
         private val HASHTAG = Regex("#\\s*([^#\\s，。！？、,.!?:：;；]+)")
 
-        fun extractUrl(input: String): String? = SHARE_URL.find(input)?.value?.trimEnd('。', '，', ',', '.', ')', '）')
-        fun isValid(input: String): Boolean = extractUrl(input) != null
+        fun extractUrl(input: String): String? = URL_CANDIDATE.findAll(input)
+            .map { it.value.trimEnd('。', '，', ',', '.', ')', '）') }
+            .firstOrNull(::isDouyinUrl)
+
+        fun isValid(input: String): Boolean {
+            val value = input.trim()
+            return value.isNotEmpty() && value.length <= MAX_INPUT_LENGTH && extractUrl(value) != null
+        }
+
+        private fun isDouyinUrl(value: String): Boolean = runCatching {
+            val host = URI(value).host?.lowercase().orEmpty()
+            host == "douyin.com" || host.endsWith(".douyin.com") ||
+                host == "iesdouyin.com" || host.endsWith(".iesdouyin.com")
+        }.getOrDefault(false)
     }
 }
 

@@ -54,7 +54,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,8 +81,8 @@ import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VideoSaveScreen(state: DirectAppUiState, onBack: () -> Unit, onSave: (String) -> Unit) {
-    var source by rememberSaveable { mutableStateOf("") }
+fun VideoSaveScreen(state: DirectAppUiState, initialSource: String, onBack: () -> Unit, onSave: (String) -> Unit) {
+    var source by remember(initialSource) { mutableStateOf(initialSource) }
     var showNotice by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -101,13 +100,22 @@ fun VideoSaveScreen(state: DirectAppUiState, onBack: () -> Unit, onSave: (String
             TopAppBar(
                 title = { Text("保存无水印视频") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
-                actions = { TextButton(onClick = { clipboardText(context)?.let { source = it } }) { Text("粘贴") } },
+                actions = {
+                    TextButton(onClick = { clipboardText(context)?.let { source = it.take(DouyinDirectClient.MAX_INPUT_LENGTH) } }) {
+                        Text("粘贴")
+                    }
+                },
             )
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("抖音分享内容", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedTextField(source, { source = it }, Modifier.fillMaxWidth().height(180.dp), placeholder = { Text("粘贴抖音分享按钮复制的完整内容……") })
+            OutlinedTextField(
+                source,
+                { if (it.length <= DouyinDirectClient.MAX_INPUT_LENGTH) source = it },
+                Modifier.fillMaxWidth().height(180.dp),
+                placeholder = { Text("粘贴抖音分享按钮复制的完整内容……") },
+            )
             Text("将尝试获取作品可用的高质量播放流，并保存到系统相册。", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(onClick = { showNotice = true }, enabled = !state.toolBusy && DouyinDirectClient.isValid(source), modifier = Modifier.fillMaxWidth()) {
                 if (state.toolBusy) { CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)) }
@@ -129,21 +137,30 @@ fun VideoSaveScreen(state: DirectAppUiState, onBack: () -> Unit, onSave: (String
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TranscriptExtractionScreen(state: DirectAppUiState, onBack: () -> Unit, onExtract: (String) -> Unit) {
-    var source by rememberSaveable { mutableStateOf("") }
+fun TranscriptExtractionScreen(state: DirectAppUiState, initialSource: String, onBack: () -> Unit, onExtract: (String) -> Unit) {
+    var source by remember(initialSource) { mutableStateOf(initialSource) }
     val context = LocalContext.current
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("提取逐字稿") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
-                actions = { TextButton(onClick = { clipboardText(context)?.let { source = it } }) { Text("粘贴") } },
+                actions = {
+                    TextButton(onClick = { clipboardText(context)?.let { source = it.take(DouyinDirectClient.MAX_INPUT_LENGTH) } }) {
+                        Text("粘贴")
+                    }
+                },
             )
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("抖音分享内容", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedTextField(source, { source = it }, Modifier.fillMaxWidth().height(180.dp), placeholder = { Text("粘贴抖音分享按钮复制的完整内容……") })
+            OutlinedTextField(
+                source,
+                { if (it.length <= DouyinDirectClient.MAX_INPUT_LENGTH) source = it },
+                Modifier.fillMaxWidth().height(180.dp),
+                placeholder = { Text("粘贴抖音分享按钮复制的完整内容……") },
+            )
             Text("只进行逐字稿提取，不执行爆款判断、钩子分析和内容提炼。", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(onClick = { onExtract(source) }, enabled = !state.toolBusy && DouyinDirectClient.isValid(source), modifier = Modifier.fillMaxWidth()) {
                 if (state.toolBusy) { CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp); Spacer(Modifier.width(8.dp)) }
@@ -177,8 +194,8 @@ private data class TeleprompterDraft(val id: String, val title: String, val cont
 fun TeleprompterEditorScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val drafts = remember { mutableStateListOf<TeleprompterDraft>().apply { addAll(loadDrafts(context)) } }
-    var title by rememberSaveable { mutableStateOf("") }
-    var content by rememberSaveable { mutableStateOf("") }
+    var title by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf("") }
     var playerText by remember { mutableStateOf<String?>(null) }
     fun save() {
         if (content.isBlank()) return
@@ -207,10 +224,15 @@ fun TeleprompterEditorScreen(onBack: () -> Unit) {
             Text("草稿箱", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (drafts.isEmpty()) Text("还没有保存的草稿", color = MaterialTheme.colorScheme.onSurfaceVariant)
             drafts.take(5).forEach { draft ->
-                TextButton(onClick = { title = draft.title; content = draft.content }, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                        Text(draft.title, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${draft.content.length} 字", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(
+                        onClick = { title = draft.title; content = draft.content },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                            Text(draft.title, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${draft.content.length} 字", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                     TextButton(onClick = { drafts.remove(draft); persistDrafts(context, drafts) }) { Text("删除", color = MaterialTheme.colorScheme.error) }
                 }
@@ -315,7 +337,10 @@ private fun persistDrafts(context: Context, drafts: List<TeleprompterDraft>) {
     val payload = buildJsonArray {
         drafts.forEach { draft ->
             add(buildJsonObject {
-                put("id", draft.id); put("title", draft.title); put("content", draft.content); put("updatedAt", draft.updatedAt)
+                put("id", draft.id)
+                put("title", draft.title)
+                put("content", draft.content)
+                put("updatedAt", draft.updatedAt)
             })
         }
     }.toString()

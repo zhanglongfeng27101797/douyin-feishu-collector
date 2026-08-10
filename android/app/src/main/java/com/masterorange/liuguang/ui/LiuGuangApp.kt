@@ -81,7 +81,6 @@ import com.masterorange.liuguang.domain.FeishuCollectionRecord
 import com.masterorange.liuguang.domain.FeishuRecordField
 import com.masterorange.liuguang.domain.SpeechProvider
 import com.masterorange.liuguang.domain.UserServiceConfiguration
-import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.net.URL
@@ -96,6 +95,8 @@ private enum class MainTab(val title: String) {
 }
 
 private enum class ToolRoute { VIDEO, TRANSCRIPT, TELEPROMPTER }
+
+private enum class SettingsSection { FEISHU, BASE, SPEECH }
 
 @Composable
 fun LiuGuangRoot(viewModel: DirectAppViewModel) {
@@ -124,9 +125,9 @@ private fun OnboardingScreen(
 ) {
     var step by rememberSaveable { mutableIntStateOf(0) }
     var appId by rememberSaveable { mutableStateOf("") }
-    var appSecret by rememberSaveable { mutableStateOf("") }
+    var appSecret by remember { mutableStateOf("") }
     var baseUrl by rememberSaveable { mutableStateOf("") }
-    var speechApiKey by rememberSaveable { mutableStateOf("") }
+    var speechApiKey by remember { mutableStateOf("") }
     val totalSteps = 4
     val valid = when (step) {
         0 -> true
@@ -377,7 +378,11 @@ private fun MainShell(state: DirectAppUiState, snackbarHostState: SnackbarHostSt
     val context = LocalContext.current
 
     LaunchedEffect(state.navigateToSubmitRequest) {
-        if (state.navigateToSubmitRequest > 0) currentTab = MainTab.COLLECT
+        if (state.navigateToSubmitRequest > 0) {
+            currentTab = MainTab.COLLECT
+            toolRoute = null
+            viewModel.selectRecord(null)
+        }
     }
     LaunchedEffect(currentTab) {
         if (currentTab == MainTab.LIBRARY) {
@@ -388,9 +393,11 @@ private fun MainShell(state: DirectAppUiState, snackbarHostState: SnackbarHostSt
             }
         }
     }
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner, currentTab) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshRecords()
+            if (event == Lifecycle.Event.ON_RESUME && currentTab == MainTab.LIBRARY) {
+                viewModel.refreshRecords()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -405,9 +412,10 @@ private fun MainShell(state: DirectAppUiState, snackbarHostState: SnackbarHostSt
     toolRoute?.let { route ->
         BackHandler { toolRoute = null }
         when (route) {
-            ToolRoute.VIDEO -> VideoSaveScreen(state, { toolRoute = null }, viewModel::saveVideo)
+            ToolRoute.VIDEO -> VideoSaveScreen(state, state.sourceDraft, { toolRoute = null }, viewModel::saveVideo)
             ToolRoute.TRANSCRIPT -> TranscriptExtractionScreen(
                 state,
+                state.sourceDraft,
                 { toolRoute = null; viewModel.clearTranscriptOutcome() },
                 viewModel::extractTranscript,
             )
@@ -423,7 +431,7 @@ private fun MainShell(state: DirectAppUiState, snackbarHostState: SnackbarHostSt
                 title = { Text(currentTab.title) },
                 actions = {
                     if (currentTab == MainTab.COLLECT) {
-                        TextButton(onClick = { clipboardText(context)?.let(viewModel::setSourceDraft) }) { Text("粘贴") }
+                        TextButton(onClick = { clipboardText(context)?.let(viewModel::acceptSharedText) }) { Text("粘贴") }
                     }
                     if (currentTab == MainTab.LIBRARY) {
                         IconButton(onClick = viewModel::refreshRecords, enabled = !state.isLoadingRecords) {
@@ -498,7 +506,7 @@ private fun SubmitScreen(
                         when {
                             recognizedURL != null -> Text("🔗  $recognizedURL", maxLines = 1, overflow = TextOverflow.Ellipsis)
                             state.sourceDraft.isNotEmpty() -> Text("没有识别到抖音链接", color = Color(0xFF9A6700))
-                            else -> Text("${state.sourceDraft.length}/${DirectAppViewModel.MAX_SOURCE_LENGTH}")
+                            else -> Text("${state.sourceDraft.length}/${DouyinDirectClient.MAX_INPUT_LENGTH}")
                         }
                     },
                 )
@@ -674,105 +682,6 @@ private fun statusColor(status: String): Color = when {
     else -> Color(0xFF9A6700)
 }
 
-@Composable
-private fun JobCard(job: CollectionJob, onClick: () -> Unit) {
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusLabel(job.status)
-                Spacer(Modifier.weight(1f))
-                Text("${job.progress}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Text(
-                text = job.title.ifBlank { "抖音采集任务" },
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(job.source, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(job.stage.title, style = MaterialTheme.typography.bodySmall)
-            LinearProgressIndicator(progress = { job.progress / 100f }, modifier = Modifier.fillMaxWidth())
-        }
-    }
-}
-
-@Composable
-private fun StatusLabel(status: CollectionJob.Status) {
-    val color = when (status) {
-        CollectionJob.Status.SUCCEEDED -> Color(0xFF287A4B)
-        CollectionJob.Status.FAILED -> MaterialTheme.colorScheme.error
-        CollectionJob.Status.RETRY_WAIT -> Color(0xFF9A6700)
-        else -> MaterialTheme.colorScheme.primary
-    }
-    Text(status.title, color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun JobDetailScreen(
-    job: CollectionJob,
-    busy: Boolean,
-    snackbarHostState: SnackbarHostState,
-    onBack: () -> Unit,
-    onRetry: () -> Unit,
-) {
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(job.title.ifBlank { "任务详情" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回") }
-                },
-            )
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            SectionCard(title = job.status.title) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusLabel(job.status)
-                    Spacer(Modifier.width(12.dp))
-                    Text("${job.stage.title} · ${job.progress}%")
-                }
-                LinearProgressIndicator(progress = { job.progress / 100f }, modifier = Modifier.fillMaxWidth())
-                DetailRow("创建时间", formatDate(job.createdAt))
-                DetailRow("更新时间", formatDate(job.updatedAt))
-                if (job.feishuRecordId.isNotBlank()) DetailRow("飞书记录", job.feishuRecordId)
-            }
-            SectionCard(title = "抖音分享内容") { Text(job.source) }
-            if (job.errorMessage.isNotBlank()) {
-                SectionCard(title = "失败原因") { Text(job.errorMessage, color = MaterialTheme.colorScheme.error) }
-            }
-            if (job.canRetry) {
-                Button(onClick = onRetry, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                    if (busy) {
-                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Text(if (busy) "正在重试" else "重新提交")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    if (value.isBlank()) return
-    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-        Text(label, modifier = Modifier.width(88.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, modifier = Modifier.weight(1f))
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CollectionRecordDetailScreen(
@@ -820,11 +729,19 @@ private fun SettingsScreen(
 ) {
     val current = state.configuration ?: return
     var appId by rememberSaveable(current.feishuAppId) { mutableStateOf(current.feishuAppId) }
-    var appSecret by rememberSaveable(current.feishuAppSecret) { mutableStateOf(current.feishuAppSecret) }
+    var appSecret by remember(current.feishuAppSecret) { mutableStateOf(current.feishuAppSecret) }
     var baseUrl by rememberSaveable(current.feishuBaseUrl) { mutableStateOf(current.feishuBaseUrl) }
-    var speechApiKey by rememberSaveable(current.speechApiKey) { mutableStateOf(current.speechApiKey) }
-    var editing by rememberSaveable { mutableStateOf<String?>(null) }
+    var speechApiKey by remember(current.speechApiKey) { mutableStateOf(current.speechApiKey) }
+    var editing by remember { mutableStateOf<SettingsSection?>(null) }
     var confirmDisconnect by remember { mutableStateOf(false) }
+    val pendingConfiguration = UserServiceConfiguration(
+        appId,
+        appSecret,
+        baseUrl,
+        SpeechProvider.VOLCENGINE,
+        speechApiKey,
+    )
+    val canSaveConfiguration = runCatching { pendingConfiguration.normalized() }.isSuccess
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(padding),
@@ -833,34 +750,40 @@ private fun SettingsScreen(
     ) {
         item {
             SectionCard(title = "服务配置") {
-                SettingsRow("飞书应用凭证", if (editing == "feishu") "正在编辑" else "已配置")
+                SettingsRow("飞书应用凭证", if (editing == SettingsSection.FEISHU) "正在编辑" else "已配置")
                 HorizontalDivider()
-                SettingsRow("目标多维表格", if (editing == "base") "正在编辑" else "已配置")
+                SettingsRow("目标多维表格", if (editing == SettingsSection.BASE) "正在编辑" else "已配置")
                 HorizontalDivider()
-                SettingsRow("火山语音 API Key", if (editing == "speech") "正在编辑" else "已配置")
+                SettingsRow("火山语音 API Key", if (editing == SettingsSection.SPEECH) "正在编辑" else "已配置")
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TextButton(onClick = { editing = "feishu" }) { Text("飞书") }
-                    TextButton(onClick = { editing = "base" }) { Text("表格") }
-                    TextButton(onClick = { editing = "speech" }) { Text("语音") }
+                    TextButton(onClick = { editing = SettingsSection.FEISHU }) { Text("飞书") }
+                    TextButton(onClick = { editing = SettingsSection.BASE }) { Text("表格") }
+                    TextButton(onClick = { editing = SettingsSection.SPEECH }) { Text("语音") }
                 }
                 Text("哪项配置有问题，就只修改并保存该项；其他凭证不会被清除。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         if (editing != null) {
             item {
-                SectionCard(title = when (editing) { "feishu" -> "飞书应用凭证"; "base" -> "目标多维表格"; else -> "火山语音" }) {
+                SectionCard(title = when (editing) {
+                    SettingsSection.FEISHU -> "飞书应用凭证"
+                    SettingsSection.BASE -> "目标多维表格"
+                    SettingsSection.SPEECH -> "火山语音"
+                    null -> return@item
+                }) {
                     when (editing) {
-                        "feishu" -> {
+                        SettingsSection.FEISHU -> {
                             OutlinedTextField(appId, { appId = it }, Modifier.fillMaxWidth(), label = { Text("App ID") }, singleLine = true)
                             OutlinedTextField(appSecret, { appSecret = it }, Modifier.fillMaxWidth(), label = { Text("App Secret") }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
                         }
-                        "base" -> OutlinedTextField(baseUrl, { baseUrl = it }, Modifier.fillMaxWidth(), label = { Text("飞书 Base 链接") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
-                        else -> OutlinedTextField(speechApiKey, { speechApiKey = it }, Modifier.fillMaxWidth(), label = { Text("火山语音 API Key") }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
+                        SettingsSection.BASE -> OutlinedTextField(baseUrl, { baseUrl = it }, Modifier.fillMaxWidth(), label = { Text("飞书 Base 链接") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+                        SettingsSection.SPEECH -> OutlinedTextField(speechApiKey, { speechApiKey = it }, Modifier.fillMaxWidth(), label = { Text("火山语音 API Key") }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
+                        null -> Unit
                     }
                     Button(onClick = {
-                        onSave(UserServiceConfiguration(appId, appSecret, baseUrl, SpeechProvider.VOLCENGINE, speechApiKey))
+                        onSave(pendingConfiguration)
                         editing = null
-                    }, modifier = Modifier.fillMaxWidth()) {
+                    }, modifier = Modifier.fillMaxWidth(), enabled = canSaveConfiguration) {
                         Text("保存")
                     }
                 }
@@ -908,12 +831,6 @@ private fun SettingsRow(label: String, value: String) {
     }
 }
 
-private fun formatDate(value: String): String = runCatching { DATE_FORMATTER.format(Instant.parse(value)) }.getOrDefault(value)
-
 private fun formatTime(value: Long): String = java.time.Instant.ofEpochMilli(value)
     .atZone(ZoneId.systemDefault())
     .format(DateTimeFormatter.ofPattern("HH:mm"))
-
-private val DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter
-    .ofPattern("yyyy-MM-dd HH:mm")
-    .withZone(ZoneId.systemDefault())

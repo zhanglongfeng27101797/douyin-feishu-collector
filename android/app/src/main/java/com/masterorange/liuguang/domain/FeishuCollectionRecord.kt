@@ -22,7 +22,7 @@ data class FeishuCollectionRecord(
     }
 
     fun link(vararg names: String): String? = names.firstNotNullOfOrNull { name ->
-        field(name)?.links?.firstOrNull() ?: field(name)?.text?.takeIf { it.startsWith("http") }
+        field(name)?.links?.firstOrNull(String::isHttpsUrl) ?: field(name)?.text?.takeIf(String::isHttpsUrl)
     }
 
     val title: String get() = text("标题", "主题", "博主") ?: "未命名采集"
@@ -32,3 +32,5 @@ data class FeishuCollectionRecord(
     val highlight: String? get() = text("爆款")
     val benchmark: String? get() = text("对标参考")
 }
+
+private fun String.isHttpsUrl(): Boolean = startsWith("https://", ignoreCase = true)

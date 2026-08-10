@@ -9,8 +9,8 @@ import com.masterorange.liuguang.data.TranscriptOutcome
 import com.masterorange.liuguang.domain.CollectionJob
 import com.masterorange.liuguang.domain.FeishuCollectionRecord
 import com.masterorange.liuguang.domain.UserServiceConfiguration
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.util.UUID
 
 data class DirectAppUiState(
@@ -54,17 +54,21 @@ class DirectAppViewModel(private val repository: DirectCollectionRepository) : V
     }
 
     fun setSourceDraft(value: String) {
-        if (value.length <= MAX_SOURCE_LENGTH) update { it.copy(sourceDraft = value) }
+        if (value.length <= DouyinDirectClient.MAX_INPUT_LENGTH) update { it.copy(sourceDraft = value) }
     }
 
     fun acceptSharedText(value: String) {
-        val shared = value.trim().take(MAX_SOURCE_LENGTH)
+        val shared = value.trim().take(DouyinDirectClient.MAX_INPUT_LENGTH)
         if (shared.isEmpty()) return
         update {
             it.copy(
                 sourceDraft = shared,
                 navigateToSubmitRequest = it.navigateToSubmitRequest + 1,
-                message = if (value.length > MAX_SOURCE_LENGTH) "分享内容过长，已保留前 $MAX_SOURCE_LENGTH 个字符" else "已接收分享内容",
+                message = if (value.length > DouyinDirectClient.MAX_INPUT_LENGTH) {
+                    "分享内容过长，已保留前 ${DouyinDirectClient.MAX_INPUT_LENGTH} 个字符"
+                } else {
+                    "已接收分享内容"
+                },
             )
         }
     }
@@ -73,19 +77,19 @@ class DirectAppViewModel(private val repository: DirectCollectionRepository) : V
         val source = mutableState.value.sourceDraft
         if (mutableState.value.isSubmitting || !DouyinDirectClient.isValid(source)) return
         val id = UUID.randomUUID().toString()
-        val now = Instant.now().toString()
-        val queued = CollectionJob(id, CollectionJob.Status.QUEUED, CollectionJob.Stage.QUEUED, source, "", 0, "", "", false, now, now)
+        val queued = CollectionJob(id, CollectionJob.Status.QUEUED, CollectionJob.Stage.QUEUED, "", 0)
         update { it.copy(jobs = listOf(queued) + it.jobs, sourceDraft = "", isSubmitting = true, message = null) }
         viewModelScope.launch {
             try {
-                val outcome = repository.collect(source) { stage, progress, title, recordId ->
-                    replaceJob(id, stage, progress, title, recordId, null)
+                val outcome = repository.collect(source) { stage, progress, title ->
+                    replaceJob(id, stage, progress, title)
                 }
-                replaceJob(id, CollectionJob.Stage.COMPLETED, 100, outcome.title, outcome.recordId, null)
+                replaceJob(id, CollectionJob.Stage.COMPLETED, 100, outcome.title)
                 update { it.copy(isSubmitting = false, message = "采集任务已完成") }
                 refreshRecords()
-            } catch (error: Throwable) {
-                replaceJob(id, null, null, null, null, error.userMessage())
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                replaceJob(id, failed = true)
                 update { it.copy(isSubmitting = false, message = error.userMessage()) }
             }
         }
@@ -95,9 +99,14 @@ class DirectAppViewModel(private val repository: DirectCollectionRepository) : V
         if (!mutableState.value.isConfigured || mutableState.value.isLoadingRecords) return
         update { it.copy(isLoadingRecords = true, recordsError = null) }
         viewModelScope.launch {
-            runCatching { repository.listRecords() }
-                .onSuccess { records -> update { it.copy(records = records, isLoadingRecords = false, recordsUpdatedAt = System.currentTimeMillis()) } }
-                .onFailure { error -> update { it.copy(isLoadingRecords = false, recordsError = error.userMessage()) } }
+            try {
+                val records = repository.listRecords()
+                update { it.copy(records = records, isLoadingRecords = false, recordsUpdatedAt = System.currentTimeMillis()) }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                update { it.copy(isLoadingRecords = false, recordsError = error.userMessage()) }
+            }
         }
     }
 
@@ -107,9 +116,14 @@ class DirectAppViewModel(private val repository: DirectCollectionRepository) : V
         if (mutableState.value.toolBusy || !DouyinDirectClient.isValid(source)) return
         update { it.copy(toolBusy = true, toolStage = "正在解析并保存视频", toolProgress = 15, message = null) }
         viewModelScope.launch {
-            runCatching { repository.saveVideo(source) }
-                .onSuccess { title -> update { it.copy(toolBusy = false, toolStage = null, toolProgress = 100, message = "“$title”已保存到系统相册") } }
-                .onFailure { error -> update { it.copy(toolBusy = false, toolStage = null, message = error.userMessage()) } }
+            try {
+                val title = repository.saveVideo(source)
+                update { it.copy(toolBusy = false, toolStage = null, toolProgress = 100, message = "“$title”已保存到系统相册") }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                update { it.copy(toolBusy = false, toolStage = null, message = error.userMessage()) }
+            }
         }
     }
 
@@ -117,34 +131,41 @@ class DirectAppViewModel(private val repository: DirectCollectionRepository) : V
         if (mutableState.value.toolBusy || !DouyinDirectClient.isValid(source)) return
         update { it.copy(toolBusy = true, toolStage = "正在解析抖音作品", toolProgress = 0, transcriptOutcome = null, message = null) }
         viewModelScope.launch {
-            runCatching {
-                repository.extractTranscript(source) { stage, progress -> update { it.copy(toolStage = stage, toolProgress = progress) } }
-            }.onSuccess { outcome ->
+            try {
+                val outcome = repository.extractTranscript(source) { stage, progress ->
+                    update { it.copy(toolStage = stage, toolProgress = progress) }
+                }
                 update { it.copy(toolBusy = false, toolStage = null, toolProgress = 100, transcriptOutcome = outcome) }
                 refreshRecords()
-            }.onFailure { error -> update { it.copy(toolBusy = false, toolStage = null, message = error.userMessage()) } }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                update { it.copy(toolBusy = false, toolStage = null, message = error.userMessage()) }
+            }
         }
     }
 
     fun clearTranscriptOutcome() = update { it.copy(transcriptOutcome = null, toolProgress = 0) }
     fun consumeMessage() = update { it.copy(message = null) }
 
-    private fun replaceJob(id: String, stage: CollectionJob.Stage?, progress: Int?, title: String?, recordId: String?, error: String?) {
+    private fun replaceJob(
+        id: String,
+        stage: CollectionJob.Stage? = null,
+        progress: Int? = null,
+        title: String? = null,
+        failed: Boolean = false,
+    ) {
         update { current ->
             current.copy(jobs = current.jobs.map { old ->
                 if (old.id != id) old else old.copy(
                     status = when {
-                        error != null -> CollectionJob.Status.FAILED
+                        failed -> CollectionJob.Status.FAILED
                         stage == CollectionJob.Stage.COMPLETED -> CollectionJob.Status.SUCCEEDED
                         else -> CollectionJob.Status.RUNNING
                     },
                     stage = stage ?: old.stage,
                     progress = progress ?: old.progress,
                     title = title ?: old.title,
-                    feishuRecordId = recordId ?: old.feishuRecordId,
-                    errorMessage = error.orEmpty(),
-                    canRetry = false,
-                    updatedAt = Instant.now().toString(),
                 )
             })
         }
@@ -160,6 +181,4 @@ class DirectAppViewModel(private val repository: DirectCollectionRepository) : V
             return DirectAppViewModel(repository) as T
         }
     }
-
-    companion object { const val MAX_SOURCE_LENGTH = 5000 }
 }

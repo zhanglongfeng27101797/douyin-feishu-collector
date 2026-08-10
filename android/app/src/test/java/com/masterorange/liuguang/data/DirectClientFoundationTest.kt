@@ -15,6 +15,14 @@ class DirectClientFoundationTest {
     }
 
     @Test
+    fun skipsNonDouyinUrlsAndRejectsLookalikeDomains() {
+        val source = "说明 https://example.com/help 抖音 https://v.douyin.com/abc123/"
+        assertEquals("https://v.douyin.com/abc123/", DouyinDirectClient.extractUrl(source))
+        assertFalse(DouyinDirectClient.isValid("https://evildouyin.com/video/1234567890"))
+        assertFalse(DouyinDirectClient.isValid("https://v.douyin.com/abc " + "x".repeat(5_000)))
+    }
+
+    @Test
     fun parsesFeishuBaseAndSelectedTable() {
         val (appToken, tableId) = parseFeishuBaseReference("https://example.feishu.cn/base/appToken?table=tbl123&view=vew456")
         assertEquals("appToken", appToken)

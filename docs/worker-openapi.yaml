@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: LiuGuang Worker API
   version: 1.0.0
-  description: 单用户流光任务节点供 iOS、快捷指令和其他受信客户端调用的最小接口。
+  description: 可选的单用户流光任务节点接口，供网页工具、自动化和其他受信客户端调用。
 servers:
   - url: https://worker.example.com
 security:

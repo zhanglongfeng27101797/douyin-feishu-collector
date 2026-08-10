@@ -33,7 +33,7 @@ export ANDROID_SDK_ROOT="$ANDROID_HOME"
 
 ```bash
 cd android
-./gradlew testDebugUnitTest assembleDebug
+./gradlew testDebugUnitTest assembleDebug lintDebug
 ```
 
 Debug APK 位于 `android/app/build/outputs/apk/debug/app-debug.apk`，安装命令：
