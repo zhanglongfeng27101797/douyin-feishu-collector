@@ -16,6 +16,14 @@ outputs/
 ios/build/
 ios/DerivedData/
 
+# Android/Gradle 本机构建产物和签名配置
+android/.gradle/
+android/.idea/
+android/local.properties
+android/**/build/
+android/*.jks
+android/*.keystore
+
 # 本机 LaunchAgent 文件包含绝对路径；仓库只保留 deploy/macos 下的模板。
 com.local.douyin-feishu-collector.plist
 com.local.douyin-feishu-company-collector.plist
